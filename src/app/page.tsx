@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { User } from "@/lib/types";
 import { HeroSection } from "@/components/home/HeroSection";
 import { WhyChooseSection } from "@/components/home/WhyChooseSection";
@@ -12,6 +11,11 @@ export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("hero");
+
+  // Set app name in browser tab
+  useEffect(() => {
+    document.title = "OpenEducation";
+  }, []);
 
   // Track active section on scroll
   useEffect(() => {
@@ -76,53 +80,13 @@ export default function HomePage() {
 
   const checkUser = async () => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.user?.email) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          role: "student",
-          onboarding_completed: false,
-          role_selected_at: null,
-          created_at: session.user.created_at || new Date().toISOString(),
-          updated_at: session.user.updated_at || new Date().toISOString(),
-        });
-      } else {
-        setUser(null);
-      }
-
-      // Role selection and onboarding are now handled in the main layout
+      setUser(null);
     } catch (error) {
       console.error("Error checking user:", error);
     } finally {
       setLoading(false);
     }
   };
-
-  // Listen for auth state changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            role: "student",
-            onboarding_completed: false,
-            role_selected_at: null,
-            created_at: session.user.created_at || new Date().toISOString(),
-            updated_at: session.user.updated_at || new Date().toISOString(),
-          });
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     checkUser();

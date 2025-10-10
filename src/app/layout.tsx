@@ -5,8 +5,9 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ToastProvider } from "@/components/ui/ToastProvider";
-import { AuthGates } from "@/components/auth/AuthGates";
+import { OnboardingHandler } from "@/components/auth/OnboardingHandler";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
+import { RouteGuard } from "@/components/auth/RouteGuard";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,6 +18,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang='en'>
+      <head>
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
+      </head>
       <body className={inter.className}>
         <ToastProvider>
           <div className='min-h-screen flex flex-col'>
@@ -25,7 +29,8 @@ export default function RootLayout({
             <Footer />
           </div>
 
-          <AuthGates />
+          <RouteGuard />
+          <OnboardingHandler />
           <LoadingOverlay />
         </ToastProvider>
       </body>

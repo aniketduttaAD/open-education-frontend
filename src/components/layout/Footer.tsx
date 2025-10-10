@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { BookOpen, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react'
+import { BookOpen, Mail, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react'
 
 export function Footer() {
   return (
@@ -105,11 +105,6 @@ export function Footer() {
               <li>
                 <Link href="/support" className="text-gray-400 hover:text-white transition-colors">
                   Support
-                </Link>
-              </li>
-              <li>
-                <Link href="/faq" className="text-gray-400 hover:text-white transition-colors">
-                  FAQ
                 </Link>
               </li>
             </ul>

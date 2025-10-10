@@ -8,7 +8,8 @@ export function LoadingOverlay() {
   const isActive = count > 0
 
   useEffect(() => {
-    return loadingBus.subscribe(setCount)
+    const unsubscribe = loadingBus.subscribe(setCount)
+    return unsubscribe
   }, [])
 
   if (!isActive) return null

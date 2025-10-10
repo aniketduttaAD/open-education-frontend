@@ -1,57 +1,36 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
-import { useAuthStore } from '@/store/authStore'
+import { useUserStore } from "@/store/userStore";
 
-import { BookOpen, Trophy, Clock, Star, User } from 'lucide-react'
-import { User as UserType, StudentProfile } from '@/lib/types'
+import { BookOpen, Trophy, Clock, Star, User } from "lucide-react";
+import { User as UserType, StudentDetails } from "@/lib/userTypes";
 
 export default function StudentDashboard() {
-  const router = useRouter()
-  const [user, setUser] = useState<UserType | null>(null)
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const fetchProfile = useAuthStore(s => s.fetchProfile)
-
-  const checkUserAndLoadProfile = useCallback(async () => {
-    try {
-      await fetchProfile()
-      const u: any = useAuthStore.getState().user
-      if (!u) {
-        router.push('/')
-        return
-      }
-      setUser({
-        id: u.id,
-        email: u.email,
-        role: 'student',
-        onboarding_completed: !!u.onboarding_complete,
-        role_selected_at: null,
-        created_at: u.created_at,
-        updated_at: u.updated_at
-      })
-      setStudentProfile(u.student_details || null)
-    } catch (error) {
-      console.error('Error checking user:', error)
-      router.push('/')
-    } finally {
-      setLoading(false)
-    }
-    }, [router, fetchProfile])
+  const router = useRouter();
+  const { user, userLoading, fetchUser } = useUserStore();
+  const [studentProfile, setStudentProfile] = useState<StudentDetails | null>(null);
 
   useEffect(() => {
-    checkUserAndLoadProfile()
-  }, [checkUserAndLoadProfile])
+    // Fetch user data if not already loaded
+    if (!user && !userLoading) {
+      fetchUser();
+    }
+  }, [user, userLoading, fetchUser]);
 
-  
+  useEffect(() => {
+    if (!user) {
+      router.push("/");
+      return;
+    }
+    setStudentProfile(user.student_details || null);
+  }, [user, router]);
 
-
-
-  if (loading) {
+  if (userLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -59,7 +38,7 @@ export default function StudentDashboard() {
           <p className="mt-4 text-neutral-600">Loading your dashboard...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -68,7 +47,7 @@ export default function StudentDashboard() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-neutral-900 mb-2">
-            Welcome back, {studentProfile?.name || 'Student'}!
+            Welcome back, Student!
           </h1>
           <p className="text-neutral-600">
             Continue your learning journey with AI-powered education.
@@ -138,18 +117,28 @@ export default function StudentDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card>
             <CardHeader>
-              <h2 className="text-xl font-semibold text-neutral-900">Quick Actions</h2>
+              <h2 className="text-xl font-semibold text-neutral-900">
+                Quick Actions
+              </h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <Button className="w-full justify-start" size="lg">
                 <BookOpen className="w-5 h-5 mr-2" />
                 Browse Courses
               </Button>
-              <Button className="w-full justify-start" variant="outline" size="lg">
+              <Button
+                className="w-full justify-start"
+                variant="outline"
+                size="lg"
+              >
                 <Trophy className="w-5 h-5 mr-2" />
                 View Achievements
               </Button>
-              <Button className="w-full justify-start" variant="outline" size="lg">
+              <Button
+                className="w-full justify-start"
+                variant="outline"
+                size="lg"
+              >
                 <User className="w-5 h-5 mr-2" />
                 Edit Profile
               </Button>
@@ -158,7 +147,9 @@ export default function StudentDashboard() {
 
           <Card>
             <CardHeader>
-              <h2 className="text-xl font-semibold text-neutral-900">Recent Activity</h2>
+              <h2 className="text-xl font-semibold text-neutral-900">
+                Recent Activity
+              </h2>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8">
@@ -179,39 +170,58 @@ export default function StudentDashboard() {
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card>
               <CardHeader>
-                <h2 className="text-xl font-semibold text-neutral-900">Profile Details</h2>
+                <h2 className="text-xl font-semibold text-neutral-900">
+                  Profile Details
+                </h2>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-neutral-600">Degree</span>
-                  <span className="text-neutral-900 ml-4 text-right max-w-[60%] truncate">{(studentProfile as any).degree || '—'}</span>
+                  <span className="text-neutral-900 ml-4 text-right max-w-[60%] truncate">
+                    {studentProfile?.degree || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-600">College</span>
-                  <span className="text-neutral-900 ml-4 text-right max-w-[60%] truncate">{(studentProfile as any).college_name || '—'}</span>
+                  <span className="text-neutral-900 ml-4 text-right max-w-[60%] truncate">
+                    {studentProfile?.college_name || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-600">Experience Level</span>
-                  <span className="text-neutral-900 ml-4 text-right">{(studentProfile as any).experience_level || '—'}</span>
+                  <span className="text-neutral-900 ml-4 text-right">
+                    {studentProfile?.experience_level || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-600">Interests</span>
-                  <span className="text-neutral-900 ml-4 text-right max-w-[60%] truncate">{((studentProfile as any).interests || []).join(', ') || '—'}</span>
+                  <span className="text-neutral-900 ml-4 text-right max-w-[60%] truncate">
+                    {(studentProfile?.interests || []).join(", ") || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-600">Learning Goals</span>
-                  <span className="text-neutral-900 ml-4 text-right max-w-[60%] truncate">{((studentProfile as any).learning_goals || []).join(', ') || '—'}</span>
+                  <span className="text-neutral-900 ml-4 text-right max-w-[60%] truncate">
+                    {(studentProfile?.learning_goals || []).join(", ") || "—"}
+                  </span>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <h2 className="text-xl font-semibold text-neutral-900">Getting Started Tips</h2>
+                <h2 className="text-xl font-semibold text-neutral-900">
+                  Getting Started Tips
+                </h2>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <p className="text-neutral-700">Complete your profile to get personalized course recommendations.</p>
-                <p className="text-neutral-700">Enroll in a course to start tracking your progress.</p>
+                <p className="text-neutral-700">
+                  Complete your profile to get personalized course
+                  recommendations.
+                </p>
+                <p className="text-neutral-700">
+                  Enroll in a course to start tracking your progress.
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -221,7 +231,9 @@ export default function StudentDashboard() {
         <div className="mt-8">
           <Card>
             <CardHeader>
-              <h2 className="text-xl font-semibold text-neutral-900">Recommended for You</h2>
+              <h2 className="text-xl font-semibold text-neutral-900">
+                Recommended for You
+              </h2>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8">
@@ -230,16 +242,15 @@ export default function StudentDashboard() {
                 </div>
                 <p className="text-neutral-600 mb-4">No recommendations yet</p>
                 <p className="text-sm text-neutral-500 mb-4">
-                  Complete your profile and start learning to get personalized recommendations.
+                  Complete your profile and start learning to get personalized
+                  recommendations.
                 </p>
-                <Button>
-                  Explore Courses
-                </Button>
+                <Button>Explore Courses</Button>
               </div>
             </CardContent>
           </Card>
         </div>
       </main>
     </div>
-  )
+  );
 }

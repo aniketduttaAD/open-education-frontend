@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { animations } from "@/lib/animations";
 import { ArrowRight } from "lucide-react";
-import { GoogleLoginModal } from "@/components/auth/GoogleLoginModal";
+import { GoogleOneTap } from "@/components/auth/GoogleOneTap";
 
 export function HeroSection() {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -86,8 +86,8 @@ export function HeroSection() {
         </motion.div>
       </div>
 
-      {/* Google Login Modal */}
-      <GoogleLoginModal
+      {/* Google One Tap Modal */}
+      <GoogleOneTap
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onSuccess={() => {

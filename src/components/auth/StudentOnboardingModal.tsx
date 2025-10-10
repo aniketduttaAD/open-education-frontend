@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button'
 import { User, GraduationCap, MapPin, Calendar } from 'lucide-react'
 import { z } from 'zod'
 import { useAuthStore } from '@/store/authStore'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 interface StudentOnboardingModalProps {
   isOpen: boolean
@@ -15,9 +17,24 @@ interface StudentOnboardingModalProps {
 }
 
 const StudentOnboardingSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  age: z.number().min(13, 'Age must be at least 13').max(100, 'Age must be realistic'),
   gender: z.enum(['male','female','other'], { required_error: 'Please select your gender' }),
+  dob: z.date({ required_error: 'Please select your date of birth' }).refine(
+    (date) => {
+      const today = new Date()
+      const age = today.getFullYear() - date.getFullYear()
+      const monthDiff = today.getMonth() - date.getMonth()
+      const dayDiff = today.getDate() - date.getDate()
+      
+      // Calculate actual age considering month and day
+      let actualAge = age
+      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        actualAge = age - 1
+      }
+      
+      return actualAge >= 13 && actualAge <= 100
+    },
+    'You must be between 13 and 100 years old'
+  ),
   latestDegree: z.string().min(1, 'Latest degree is required'),
   collegeUniversity: z.string().min(1, 'College/University name is required')
 })
@@ -26,9 +43,8 @@ type StudentOnboardingData = z.infer<typeof StudentOnboardingSchema>
 
 export function StudentOnboardingModal({ isOpen, onComplete, loading = false }: StudentOnboardingModalProps) {
   const [formData, setFormData] = useState<StudentOnboardingData>({
-    name: '',
-    age: 0,
     gender: 'male',
+    dob: new Date(),
     latestDegree: '',
     collegeUniversity: ''
   })
@@ -37,7 +53,7 @@ export function StudentOnboardingModal({ isOpen, onComplete, loading = false }: 
   const saveStudentDetails = useAuthStore(s => s.saveStudentDetails)
   const completeOnboarding = useAuthStore(s => s.completeOnboarding)
 
-  const handleStringChange = (field: 'name' | 'gender' | 'latestDegree' | 'collegeUniversity', value: string) => {
+  const handleStringChange = (field: 'gender' | 'latestDegree' | 'collegeUniversity', value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors(prev => {
@@ -48,15 +64,16 @@ export function StudentOnboardingModal({ isOpen, onComplete, loading = false }: 
     }
   }
 
-  const handleAgeChange = (value: string) => {
-    const age = parseInt(value) || 0
-    setFormData(prev => ({ ...prev, age }))
-    if (errors.age) {
-      setErrors(prev => {
-        const newErrors = { ...prev }
-        delete newErrors.age
-        return newErrors
-      })
+  const handleDateChange = (date: Date | null) => {
+    if (date) {
+      setFormData(prev => ({ ...prev, dob: date }))
+      if (errors.dob) {
+        setErrors(prev => {
+          const newErrors = { ...prev }
+          delete newErrors.dob
+          return newErrors
+        })
+      }
     }
   }
 
@@ -78,6 +95,8 @@ export function StudentOnboardingModal({ isOpen, onComplete, loading = false }: 
   const handleSubmit = async () => {
     if (!validateForm()) return
     await saveStudentDetails({
+      gender: formData.gender,
+      dob: formData.dob.toISOString().split('T')[0], // Convert to YYYY-MM-DD format
       degree: formData.latestDegree,
       college_name: formData.collegeUniversity,
       education_level: formData.latestDegree,
@@ -131,47 +150,9 @@ export function StudentOnboardingModal({ isOpen, onComplete, loading = false }: 
 
               <CardContent className="px-8 pb-8">
                 <div className="space-y-6">
-                  {/* Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => handleStringChange('name', e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        errors.name ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="Enter your full name"
-                    />
-                    {errors.name && (
-                      <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-                    )}
-                  </div>
 
-                  {/* Age and Gender */}
+                  {/* Gender and Date of Birth */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Age *
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.age || ''}
-                        onChange={(e) => handleAgeChange(e.target.value)}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                          errors.age ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Enter your age"
-                        min="13"
-                        max="100"
-                      />
-                      {errors.age && (
-                        <p className="mt-1 text-sm text-red-600">{errors.age}</p>
-                      )}
-                    </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Gender *
@@ -190,6 +171,29 @@ export function StudentOnboardingModal({ isOpen, onComplete, loading = false }: 
                       </select>
                       {errors.gender && (
                         <p className="mt-1 text-sm text-red-600">{errors.gender}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Calendar className="w-4 h-4 inline mr-1" />
+                        Date of Birth *
+                      </label>
+                      <DatePicker
+                        selected={formData.dob}
+                        onChange={handleDateChange}
+                        dateFormat="dd/MM/yyyy"
+                        showYearDropdown
+                        showMonthDropdown
+                        dropdownMode="select"
+                        maxDate={new Date()}
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                          errors.dob ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholderText="Select your date of birth"
+                      />
+                      {errors.dob && (
+                        <p className="mt-1 text-sm text-red-600">{errors.dob}</p>
                       )}
                     </div>
                   </div>

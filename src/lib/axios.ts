@@ -79,11 +79,11 @@ api.interceptors.response.use(
       originalRequest._retry = true
       isRefreshing = true
       try {
-        const { data } = await api.post<{ access_token: string; refresh_token?: string }>('/auth/refresh', { refresh_token: storedRefresh })
-        const newAccess = data.access_token
+        const { data } = await api.post<{ success: boolean; data: { access_token: string; refresh_token?: string } }>('/auth/refresh', { refresh_token: storedRefresh })
+        const newAccess = data.data.access_token
         if (typeof window !== 'undefined') {
           localStorage.setItem('access_token', newAccess)
-          if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token)
+          if (data.data.refresh_token) localStorage.setItem('refresh_token', data.data.refresh_token)
         }
         api.defaults.headers.common.Authorization = `Bearer ${newAccess}`
         processQueue(null, newAccess)

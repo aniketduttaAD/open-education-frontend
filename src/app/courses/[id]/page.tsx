@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { supabase } from '@/lib/supabase'
 import { usePayment } from '@/lib/payments'
 import { formatPrice } from '@/lib/utils'
 import { CourseEnrollment, CourseWithTutor } from '@/lib/types'
@@ -51,44 +50,14 @@ export default function CourseDetailPage() {
 
   const fetchCourseData = useCallback(async () => {
     try {
-      // Fetch course details
-      const { data: courseData, error: courseError } = await supabase
-        .from('courses')
-        .select(`
-          *,
-          tutor_profiles (
-            id,
-            name,
-            bio,
-            avg_rating,
-            total_students
-          )
-        `)
-        .eq('id', courseId)
-        .single()
-
-      if (courseError) throw courseError
-      setCourse(courseData)
-
-      // Check if user is enrolled
-      if (user) {
-        const { data: enrollmentData, error: enrollmentError } = await supabase
-          .from('course_enrollments')
-          .select('*')
-          .eq('course_id', courseId)
-          .eq('student_id', user.id)
-          .single()
-
-        if (!enrollmentError && enrollmentData) {
-          setEnrollment(enrollmentData)
-        }
-      }
+      setCourse(null)
+      setEnrollment(null)
     } catch (error) {
       console.error('Error fetching course data:', error)
     } finally {
       setLoading(false)
     }
-  }, [courseId, user])
+  }, [])
 
   useEffect(() => {
     checkUser()
@@ -101,20 +70,7 @@ export default function CourseDetailPage() {
   }, [user, courseId, fetchCourseData])
 
   const checkUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user) {
-      // Create a proper User object for the Header component
-      const userObj = {
-        id: session.user.id,
-        email: session.user.email || '',
-        role: 'student' as const, // Default role
-        onboarding_completed: false,
-        role_selected_at: null,
-        created_at: session.user.created_at || new Date().toISOString(),
-        updated_at: session.user.updated_at || new Date().toISOString()
-      }
-      setUser(userObj)
-    }
+    setUser(null)
   }
 
 
@@ -129,7 +85,7 @@ export default function CourseDetailPage() {
 
     setEnrolling(true)
     try {
-      await processPayment(course.id, course.price, course.title)
+      await processPayment()
       
       // Refresh enrollment data
       await fetchCourseData()

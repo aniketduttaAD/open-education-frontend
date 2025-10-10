@@ -10,7 +10,6 @@ type CourseWithTutor = Course & {
     name: string
   } | null
 }
-import { supabase } from '@/lib/supabase'
 import { Star, Users, Play, BookOpen } from 'lucide-react'
 
 interface FeaturedCoursesProps {
@@ -31,41 +30,9 @@ export function FeaturedCourses({ user }: FeaturedCoursesProps) {
 
   const fetchFeaturedCourses = async () => {
     try {
-      // First try to fetch featured courses
-      const { data, error } = await supabase
-        .from('courses')
-        .select(`
-          *,
-          tutor_profiles(name)
-        `)
-        .eq('status', 'published')
-        .eq('is_featured', true)
-        .order('total_enrollments', { ascending: false })
-        .limit(6)
-
-      // If the is_featured column doesn't exist, fall back to fetching published courses
-      if (error && error.code === '42703') {
-        console.log('is_featured column not found, falling back to published courses')
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('courses')
-          .select(`
-            *,
-            tutor_profiles(name)
-          `)
-          .eq('status', 'published')
-          .order('total_enrollments', { ascending: false })
-          .limit(6)
-
-        if (fallbackError) throw fallbackError
-        setCourses(fallbackData || [])
-      } else if (error) {
-        throw error
-      } else {
-        setCourses(data || [])
-      }
+      setCourses([])
     } catch (error) {
       console.error('Error fetching featured courses:', error)
-      // Set empty array to prevent UI errors
       setCourses([])
     } finally {
       setLoading(false)

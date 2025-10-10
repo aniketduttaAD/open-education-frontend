@@ -4,7 +4,7 @@ class LoadingBus {
   private count = 0
   private listeners: Set<Listener> = new Set()
 
-  subscribe(listener: Listener) {
+  subscribe(listener: Listener): () => void {
     this.listeners.add(listener)
     listener(this.count)
     return () => this.listeners.delete(listener)

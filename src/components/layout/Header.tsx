@@ -11,8 +11,9 @@ import {
   GraduationCap,
   Sparkles,
 } from "lucide-react";
-import { GoogleLoginModal } from "@/components/auth/GoogleLoginModal";
+import { GoogleOneTap } from "@/components/auth/GoogleOneTap";
 import { useAuthStore } from "@/store/authStore";
+import { useUserStore } from "@/store/userStore";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,16 +22,19 @@ export function Header() {
   const [displayText, setDisplayText] = useState("");
   const fullText = "AI-Powered Education Platform";
 
-  const user = useAuthStore((s) => s.user);
-  const fetchProfile = useAuthStore((s) => s.fetchProfile);
+  const { user, fetchUser } = useUserStore();
   const logout = useAuthStore((s) => s.logout);
 
   useEffect(() => {
     // Persisted auth: if access_token exists, fetch profile on mount
-    if (typeof window !== "undefined" && localStorage.getItem("access_token")) {
-      fetchProfile();
+    if (typeof window !== "undefined" && localStorage.getItem("access_token") && !user) {
+      // Add a small delay to ensure the app is fully loaded
+      const timer = setTimeout(() => {
+        fetchUser();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [fetchProfile]);
+  }, [user, fetchUser]);
 
   useEffect(() => {
     let currentIndex = 0;
@@ -131,7 +135,7 @@ export function Header() {
                     {user.image ? (
                       <Image
                         src={user.image}
-                        alt={user.name}
+                        alt="User Avatar"
                         width={32}
                         height={32}
                         className='rounded-full object-cover'
@@ -139,7 +143,7 @@ export function Header() {
                     ) : (
                       <div className='w-8 h-8 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center'>
                         <span className='text-white text-sm font-medium'>
-                          {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
+                          {user.user_type === 'student' ? 'S' : user.user_type === 'tutor' ? 'T' : user.email?.charAt(0).toUpperCase()}
                         </span>
                       </div>
                     )}
@@ -154,7 +158,7 @@ export function Header() {
                     >
                       <div className='px-4 py-2 border-b border-neutral-200'>
                         <p className='text-sm font-medium text-neutral-900'>
-                          {user.name || user.email}
+                          {user.user_type === 'student' ? 'Student' : user.user_type === 'tutor' ? 'Tutor' : 'User'}
                         </p>
                         <p className='text-xs text-neutral-500 capitalize'>
                           {user.user_type}
@@ -166,6 +170,13 @@ export function Header() {
                         onClick={() => setIsProfileOpen(false)}
                       >
                         Profile Settings
+                      </Link>
+                      <Link
+                        href='/admin'
+                        className='block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100'
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        Admin Panel
                       </Link>
                       {user.user_type === 'tutor' ? (
                         <>
@@ -256,6 +267,13 @@ export function Header() {
                   >
                     Profile Settings
                   </Link>
+                  <Link
+                    href='/admin'
+                    className='text-gray-700 hover:text-blue-600 transition-colors font-medium'
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Admin Panel
+                  </Link>
                   <button
                     onClick={() => logout()}
                     className='text-left text-gray-700 hover:text-blue-600 transition-colors font-medium'
@@ -269,8 +287,8 @@ export function Header() {
         )}
       </div>
 
-      {/* Google Login Modal */}
-      <GoogleLoginModal
+      {/* Google One Tap Modal */}
+      <GoogleOneTap
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onSuccess={() => {

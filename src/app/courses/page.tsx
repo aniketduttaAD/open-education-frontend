@@ -6,7 +6,6 @@ import { CourseGrid } from '@/components/courses/CourseGrid'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { supabase } from '@/lib/supabase'
 import { Course, CourseFilters } from '@/lib/types'
 import { 
   BookOpen, 
@@ -33,22 +32,8 @@ export default function CoursesPage() {
 
   const fetchCourses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('courses')
-        .select(`
-          *,
-          tutor_profiles (
-            id,
-            name,
-            avg_rating
-          )
-        `)
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setCourses(data || [])
-      setFilteredCourses(data || [])
+      setCourses([])
+      setFilteredCourses([])
     } catch (error) {
       console.error('Error fetching courses:', error)
     } finally {

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { X, Play, Pause, Volume2, VolumeX, Maximize, RotateCcw } from 'lucide-react'
+import { X, Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 interface VideoModalProps {
@@ -22,7 +22,6 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose, videoUr
   React.useEffect(() => {
     if (isOpen && videoRef.current) {
       videoRef.current.load()
-      // Auto-play when modal opens
       videoRef.current.play().catch(console.error)
     }
   }, [isOpen, videoUrl])

@@ -265,10 +265,10 @@ export function hierarchicalToFlat(
 
 export function flatToHierarchical(flat: RoadmapData): HierarchicalRoadmapData {
   const main_topics: MainTopic[] = Object.entries(flat).map(
-    ([title, subtopics], _index) => ({
+    ([title, subtopics]) => ({
       id: `main_${Math.random().toString(36).substr(2, 9)}`,
       title,
-      subtopics: subtopics.map((subtitle, _subIndex) => ({
+      subtopics: subtopics.map((subtitle) => ({
         id: `sub_${Math.random().toString(36).substr(2, 9)}`,
         title: subtitle,
       })),

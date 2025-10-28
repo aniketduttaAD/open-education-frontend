@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useUserStore } from "@/store/userStore";
 
 import { BookOpen, Trophy, Clock, Star, User } from "lucide-react";
-import { User as UserType, StudentDetails } from "@/lib/userTypes";
+import { StudentDetails } from "@/lib/userTypes";
 
 export default function StudentDashboard() {
   const router = useRouter();

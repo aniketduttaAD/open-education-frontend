@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
 import { Course } from '@/lib/api/courses'
-import { Star, Users, Play, Clock, Sparkles, BookOpen } from "lucide-react";
+import { Play, Clock, Sparkles, BookOpen } from "lucide-react";
 import Link from "next/link";
 
 interface CourseCardProps {

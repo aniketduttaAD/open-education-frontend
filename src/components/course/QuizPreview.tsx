@@ -7,8 +7,8 @@ interface QuizPreviewProps {
   quiz: {
     id: string;
     title: string;
-    course_id: string;
-    section_id: string;
+    course_id?: string;
+    section_id?: string;
     questions: Array<{
       id: string;
       question: string;

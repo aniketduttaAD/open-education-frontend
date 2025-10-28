@@ -30,7 +30,6 @@ export const CourseGeneration: React.FC<CourseGenerationComponentProps> = ({
     startGeneration,
     stopGeneration,
     resetGeneration,
-    isConnected,
   } = useCourseGeneration({
     courseId,
     roadmapId,

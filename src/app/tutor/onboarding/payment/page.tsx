@@ -60,13 +60,14 @@ export default function TutorPaymentPage() {
         modal: { ondismiss: () => showToast("Payment cancelled.", "warning") },
       } as unknown as { [k: string]: unknown };
 
-      if (!(window as { Razorpay?: any }).Razorpay) {
+      if (!(window as { Razorpay?: unknown }).Razorpay) {
         showToast("Payment gateway unavailable. Please refresh and try again.", "error");
       } else {
-        const rz = new (window as any).Razorpay(options);
+        const RzpCtor = (window as unknown as { Razorpay: new (opts: Record<string, unknown>) => { open: () => void } }).Razorpay;
+        const rz = new RzpCtor(options as Record<string, unknown>);
         rz.open();
       }
-    } catch (e) {
+    } catch {
       showToast("Payment failed. Please try again.", "error");
     } finally {
       setLoading(false);

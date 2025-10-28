@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CourseGeneration } from "@/components/course/CourseGeneration";
 import { useRoadmapStore } from "@/store/roadmapStore";
 import { useUserStore } from "@/store/userStore";
 
-export default function CourseGenerationPage() {
+function CourseGenerationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUserStore();
@@ -165,5 +165,24 @@ export default function CourseGenerationPage() {
         className=""
       />
     </div>
+  );
+}
+
+export default function CourseGenerationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-4xl mx-auto p-5">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-10 h-10 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading course generation...</p>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <CourseGenerationContent />
+    </Suspense>
   );
 }

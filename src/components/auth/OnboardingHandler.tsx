@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUserStore } from "@/store/userStore";
 import { useAuthStore } from "@/store/authStore";
@@ -11,11 +11,9 @@ export function OnboardingHandler() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { user, userLoading, fetchUser, tutorDocuments, fetchTutorDocuments } = useUserStore();
+  const { user, userLoading, fetchUser } = useUserStore();
   const showRole = useAuthStore((s) => s.showRoleModal);
   const openRoleModal = useAuthStore((s) => s.openRoleModal);
-
-  const [checkingDocuments, setCheckingDocuments] = useState(false);
 
   // Hydrate user on first mount and on hard reloads
   useEffect(() => {
@@ -35,24 +33,6 @@ export function OnboardingHandler() {
     ]);
     return pathname ? skip.has(pathname) : false;
   }, [pathname]);
-
-  const checkDocumentsAndRedirect = async () => {
-    if (checkingDocuments) return;
-    setCheckingDocuments(true);
-    try {
-      if (tutorDocuments.length === 0) {
-        await fetchTutorDocuments();
-      }
-      if (tutorDocuments.length === 0) {
-        router.push("/tutor/onboarding");
-      }
-    } catch (err) {
-      // Be safe and send them to onboarding
-      router.push("/tutor/onboarding");
-    } finally {
-      setCheckingDocuments(false);
-    }
-  };
 
   // Global redirect + role detection and onboarding routing
   useEffect(() => {
@@ -78,7 +58,13 @@ export function OnboardingHandler() {
     if (user.user_type === "tutor") {
       const td = user.tutor_details || null;
       const bank = td?.bank_details || null;
-      const bankIncomplete = !bank || !bank.account_holder_name || !bank.account_number || !bank.ifsc_code || !bank.bank_name || !bank.account_type;
+      const bankIncomplete =
+        !bank ||
+        !bank.account_holder_name ||
+        !bank.account_number ||
+        !bank.ifsc_code ||
+        !bank.bank_name ||
+        !bank.account_type;
 
       // Route to correct step pages
       if (!user.onboarding_complete) {
@@ -108,16 +94,17 @@ export function OnboardingHandler() {
         return;
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userLoading, isSkipPath, router]);
 
   return (
     <>
       {/* Role selection modal: triggered when user exists and user_type is null. */}
-      <RoleSelectionModal isOpen={!!showRole && !!user && !userLoading && !user.user_type} />
+      <RoleSelectionModal
+        isOpen={!!showRole && !!user && !userLoading && !user.user_type}
+      />
     </>
   );
 }
 
 export default OnboardingHandler;
-
-

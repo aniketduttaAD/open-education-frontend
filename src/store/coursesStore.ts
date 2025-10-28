@@ -77,10 +77,10 @@ export const useCoursesStore = create<CoursesState>()(
         }
       },
 
-      fetchCourse: async (courseId: string) => {
+      fetchCourse: async () => {
         const state = get();
         if (state.courseLoading) return; // Prevent duplicate calls
-        
+
         set({ courseLoading: true, courseError: null });
         try {
           // TODO: Replace with actual API call when available

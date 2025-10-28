@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { VideoPlayer } from '@/components/course/VideoPlayer';
-import { QuizPreview } from '@/components/course/QuizPreview';
-import { FlashcardPreview } from '@/components/course/FlashcardPreview';
-import { roadmapApi } from '@/lib/api/roadmap';
-import type { FinalizeRoadmapResponse, PublishCourseResponse } from '@/lib/types/roadmap';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { VideoPlayer } from "@/components/course/VideoPlayer";
+import { QuizPreview } from "@/components/course/QuizPreview";
+import { FlashcardPreview } from "@/components/course/FlashcardPreview";
+import { roadmapApi } from "@/lib/api/roadmap";
+import type { PublishCourseResponse } from "@/lib/types/roadmap";
 
 interface CourseGenerationFlowProps {
   roadmapId: string;
@@ -16,27 +16,61 @@ interface CourseGenerationFlowProps {
 
 interface CourseGenerationData {
   courseId: string;
-  sections: any[];
-  videos: any[];
-  quizzes: any[];
-  flashcards: any[];
-  courseDetails: any;
-  generationSummary: any;
+  sections: Array<{
+    id: string;
+    title: string;
+    subtopics: Array<{ id: string; title: string; video_url: string | null }>;
+  }>;
+  videos: Array<{ id: string; title: string; url: string }>;
+  quizzes: Array<{
+    id: string;
+    title: string;
+    course_id: string;
+    section_id: string;
+    questions: Array<{
+      id: string;
+      question: string;
+      options: string[];
+      correct_index: number;
+      index: number;
+    }>;
+  }>;
+  flashcards: Array<{
+    id: string;
+    front: string;
+    back: string;
+    course_id: string;
+    section_id: string;
+    index: number;
+  }>;
+  courseDetails: { title: string };
+  generationSummary: {
+    totalSections: number;
+    totalSubtopics: number;
+    totalVideos: number;
+    totalQuizzes: number;
+    totalFlashcards: number;
+  };
 }
 
-export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ roadmapId }) => {
+export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({
+  roadmapId,
+}) => {
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [generationData, setGenerationData] = useState<CourseGenerationData | null>(null);
-  const [publishData, setPublishData] = useState<PublishCourseResponse | null>(null);
+  const [generationData, setGenerationData] =
+    useState<CourseGenerationData | null>(null);
+  const [publishData, setPublishData] = useState<PublishCourseResponse | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
 
   // Course details form state
-  const [courseTitle, setCourseTitle] = useState('');
+  const [courseTitle, setCourseTitle] = useState("");
   const [coursePrice, setCoursePrice] = useState(0);
-  const [courseDescription, setCourseDescription] = useState('');
+  const [courseDescription, setCourseDescription] = useState("");
 
   // Step 1: Finalize Roadmap
   const handleFinalize = async () => {
@@ -48,16 +82,66 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
       const response = await roadmapApi.finalize({ id: roadmapId });
 
       if (response.success) {
-        setGenerationData(response.data.result.finalPayload);
+        const payload = response.data.result.finalPayload;
+        setGenerationData({
+          courseId: response.data.result.courseId,
+          sections: payload.sections.map((s) => ({
+            id: s.id,
+            title: s.title,
+            subtopics: s.subtopics.map((st) => ({
+              id: st.id,
+              title: st.title,
+              video_url: st.video_url,
+            })),
+          })),
+          videos: payload.videos.map((v) => ({
+            id: v.id,
+            title: v.title,
+            url: v.url,
+          })),
+          quizzes: payload.quizzes.map((q) => ({
+            id: q.id,
+            title: q.title,
+            course_id: q.course_id,
+            section_id: q.section_id,
+            questions: q.questions.map((qq) => ({
+              id: qq.id,
+              question: qq.question,
+              options: qq.options,
+              correct_index: qq.correct_index,
+              index: qq.index,
+            })),
+          })),
+          flashcards: payload.flashcards.map((f) => ({
+            id: f.id,
+            front: f.front,
+            back: f.back,
+            course_id: f.course_id,
+            section_id: f.section_id,
+            index: f.index,
+          })),
+          courseDetails: { title: payload.courseDetails.title },
+          generationSummary: {
+            totalSections: payload.generationSummary.totalSections,
+            totalSubtopics: payload.generationSummary.totalSubtopics,
+            totalVideos: payload.generationSummary.totalVideos,
+            totalQuizzes: payload.generationSummary.totalQuizzes,
+            totalFlashcards: payload.generationSummary.totalFlashcards,
+          },
+        });
         setProgress(100);
-        
+
         // Pre-fill course title from generation data
-        setCourseTitle(response.data.result.finalPayload.courseDetails.title || '');
+        setCourseTitle(
+          response.data.result.finalPayload.courseDetails.title || ""
+        );
       } else {
-        throw new Error(response.message || 'Generation failed');
+        throw new Error(response.message || "Generation failed");
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate course');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to generate course";
+      setError(message);
     } finally {
       setIsGenerating(false);
     }
@@ -74,19 +158,21 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
       const response = await roadmapApi.publish(roadmapId, {
         title: courseTitle,
         price_inr: coursePrice,
-        description: courseDescription
+        description: courseDescription,
       });
 
       if (response.success) {
         setPublishData(response);
-        
+
         // Redirect to course page
         router.push(`/courses/${response.data.course.id}`);
       } else {
-        throw new Error(response.message || 'Publishing failed');
+        throw new Error(response.message || "Publishing failed");
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to publish course');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to publish course";
+      setError(message);
     } finally {
       setIsPublishing(false);
     }
@@ -100,17 +186,20 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
       {!generationData && (
         <Card className="mb-6">
           <CardHeader>
-            <h2 className="text-xl font-semibold">Step 1: Generate Course Content</h2>
+            <h2 className="text-xl font-semibold">
+              Step 1: Generate Course Content
+            </h2>
             <p className="text-gray-600">
-              This will generate videos, quizzes, flashcards, and embeddings for your course.
+              This will generate videos, quizzes, flashcards, and embeddings for
+              your course.
             </p>
           </CardHeader>
           <CardContent>
             {isGenerating && (
               <div className="mb-4">
                 <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -118,12 +207,12 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
               </div>
             )}
 
-            <Button 
-              onClick={handleFinalize} 
+            <Button
+              onClick={handleFinalize}
               disabled={isGenerating}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isGenerating ? 'Generating...' : 'Generate Course Content'}
+              {isGenerating ? "Generating..." : "Generate Course Content"}
             </Button>
           </CardContent>
         </Card>
@@ -134,7 +223,9 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <h2 className="text-xl font-semibold">Step 2: Review Generated Content</h2>
+              <h2 className="text-xl font-semibold">
+                Step 2: Review Generated Content
+              </h2>
             </CardHeader>
             <CardContent>
               {/* Generation Summary */}
@@ -174,7 +265,9 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
               {/* Course Details Form */}
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Course Title</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Course Title
+                  </label>
                   <input
                     type="text"
                     value={courseTitle}
@@ -183,9 +276,11 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
                     placeholder="Enter course title"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium mb-2">Price (INR)</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Price (INR)
+                  </label>
                   <input
                     type="number"
                     value={coursePrice}
@@ -194,9 +289,11 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
                     placeholder="Enter price in INR"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium mb-2">Description</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Description
+                  </label>
                   <textarea
                     value={courseDescription}
                     onChange={(e) => setCourseDescription(e.target.value)}
@@ -209,13 +306,16 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
               {/* Content Preview */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Content Preview</h3>
-                
-                {generationData.sections.map((section, sectionIndex) => (
+
+                {generationData.sections.map((section) => (
                   <Card key={section.id} className="p-4">
                     <h4 className="font-semibold mb-2">{section.title}</h4>
                     <div className="space-y-2">
-                      {section.subtopics.map((subtopic, subtopicIndex) => (
-                        <div key={subtopic.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      {section.subtopics.map((subtopic) => (
+                        <div
+                          key={subtopic.id}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                        >
                           <span>{subtopic.title}</span>
                           {subtopic.video_url && (
                             <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
@@ -233,7 +333,11 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold">Video Previews</h4>
                     {generationData.videos.slice(0, 2).map((video) => (
-                      <VideoPlayer key={video.id} videoUrl={video.url} title={video.title} />
+                      <VideoPlayer
+                        key={video.id}
+                        videoUrl={video.url}
+                        title={video.title}
+                      />
                     ))}
                   </div>
                 )}
@@ -251,18 +355,22 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
                 {/* Flashcard Previews */}
                 {generationData.flashcards.length > 0 && (
                   <div className="space-y-4">
-                    <h4 className="text-lg font-semibold">Flashcard Previews</h4>
-                    <FlashcardPreview flashcards={generationData.flashcards.slice(0, 4)} />
+                    <h4 className="text-lg font-semibold">
+                      Flashcard Previews
+                    </h4>
+                    <FlashcardPreview
+                      flashcards={generationData.flashcards.slice(0, 4)}
+                    />
                   </div>
                 )}
               </div>
 
-              <Button 
-                onClick={handlePublish} 
+              <Button
+                onClick={handlePublish}
                 disabled={isPublishing || !courseTitle}
                 className="w-full mt-6 bg-green-600 hover:bg-green-700"
               >
-                {isPublishing ? 'Publishing...' : 'Publish Course'}
+                {isPublishing ? "Publishing..." : "Publish Course"}
               </Button>
             </CardContent>
           </Card>
@@ -274,29 +382,48 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({ road
         <Card>
           <CardContent className="text-center py-8">
             <div className="text-green-600 text-6xl mb-4">✅</div>
-            <h2 className="text-2xl font-semibold mb-2">Course Published Successfully!</h2>
+            <h2 className="text-2xl font-semibold mb-2">
+              Course Published Successfully!
+            </h2>
             <p className="text-gray-600 mb-4">
-              Your course "{publishData.data.course.title}" is now live and ready for students.
+              Your course &quot;{publishData.data.course.title}&quot; is now live and
+              ready for students.
             </p>
-            
+
             <div className="space-y-2 mb-6 text-left max-w-md mx-auto">
-              <p><strong>Course ID:</strong> {publishData.data.course.id}</p>
-              <p><strong>Price:</strong> ₹{publishData.data.course.price_inr || 'Free'}</p>
-              <p><strong>Sections:</strong> {publishData.data.sections.length}</p>
-              <p><strong>Videos:</strong> {publishData.data.videos.length}</p>
-              <p><strong>Quizzes:</strong> {publishData.data.quizzes.length}</p>
-              <p><strong>Flashcards:</strong> {publishData.data.flashcards.length}</p>
+              <p>
+                <strong>Course ID:</strong> {publishData.data.course.id}
+              </p>
+              <p>
+                <strong>Price:</strong> ₹
+                {publishData.data.course.price_inr || "Free"}
+              </p>
+              <p>
+                <strong>Sections:</strong> {publishData.data.sections.length}
+              </p>
+              <p>
+                <strong>Videos:</strong> {publishData.data.videos.length}
+              </p>
+              <p>
+                <strong>Quizzes:</strong> {publishData.data.quizzes.length}
+              </p>
+              <p>
+                <strong>Flashcards:</strong>{" "}
+                {publishData.data.flashcards.length}
+              </p>
             </div>
 
             <div className="space-x-4">
-              <Button 
-                onClick={() => router.push(`/courses/${publishData.data.course.id}`)}
+              <Button
+                onClick={() =>
+                  router.push(`/courses/${publishData.data.course.id}`)
+                }
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 View Course
               </Button>
-              <Button 
-                onClick={() => router.push('/dashboard')}
+              <Button
+                onClick={() => router.push("/dashboard")}
                 variant="outline"
               >
                 Back to Dashboard

@@ -6,38 +6,14 @@ import {
   GenerateRoadmapDto,
   EditRoadmapDto,
   FinalizeRoadmapDto,
-  FinalizeRoadmapResponse,
   RoadmapData,
-  HierarchicalRoadmapData,
   hierarchicalToFlat,
   GenerateRoadmapApiResponse,
   EditRoadmapApiResponse,
   FlatRoadmapResponse,
 } from "@/lib/types/roadmap";
 import { roadmapApi } from "@/lib/api/roadmap";
-
-// Type for the API response structure
-interface ApiResponse {
-  success: boolean;
-  data: {
-    id: string;
-    data: {
-      id: string;
-      main_topics: Array<{
-        id: string;
-        title: string;
-        subtopics: Array<{
-          id: string;
-          title: string;
-        }>;
-      }>;
-    };
-    version?: number;
-  };
-  message: string;
-  timestamp: string;
-}
-
+  
 // Helper function to generate edit operations from changes
 function generateEditOperations(
   originalData: RoadmapData,
@@ -95,7 +71,7 @@ function generateEditOperations(
       }
 
       // Check for removed subtopics
-      originalTopics.forEach((originalTopic, index) => {
+      originalTopics.forEach((originalTopic) => {
         if (!currentTopics.includes(originalTopic)) {
           changes.push({
             op: "rm-sub",

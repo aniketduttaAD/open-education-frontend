@@ -10,7 +10,6 @@ import { useRoadmapStore } from "@/store/roadmapStore";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { GenerateRoadmapResponse } from "@/lib/types/roadmap";
 
 interface RoadmapGenerationFormProps {
   onRoadmapGenerated?: () => void;

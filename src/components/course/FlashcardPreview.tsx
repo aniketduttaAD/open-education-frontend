@@ -8,9 +8,9 @@ interface FlashcardPreviewProps {
     id: string;
     front: string;
     back: string;
-    course_id: string;
-    section_id: string;
-    index: number;
+    course_id?: string;
+    section_id?: string;
+    index?: number;
   }>;
 }
 

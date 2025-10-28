@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoadmapDisplayWithFinalize } from '@/components/roadmap/RoadmapDisplayWithFinalize';
 import { useUserStore } from '@/store/userStore';
@@ -14,13 +14,18 @@ export default function RoadmapPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Redirect if not authenticated or not a tutor
+  useEffect(() => {
+    if (!user || user.user_type !== 'tutor') {
+      router.push('/login');
+    }
+  }, [user, router]);
+
   if (!user || user.user_type !== 'tutor') {
-    router.push('/login');
     return null;
   }
 
   // Handle finalize success
-  const handleFinalizeSuccess = (courseId: string) => {
+  const handleFinalizeSuccess = () => {
     toast.success('Roadmap finalized successfully! Redirecting to course generation...');
     // The FinalizeButton component will handle the redirect
   };

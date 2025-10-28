@@ -4,7 +4,6 @@ import type {
   UserType,
   StudentDetails,
   TutorDetailsUpdate,
-  TutorBankDetails,
   TutorDocumentItem,
   TutorDocumentType,
   TutorDocumentUploadResponse,

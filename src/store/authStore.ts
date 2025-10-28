@@ -3,7 +3,6 @@ import { usersApi } from "@/lib/api/users";
 import { authApi } from "@/lib/api/auth";
 import { useUserStore } from "./userStore";
 import type {
-  User,
   UserType,
   StudentDetails,
   TutorDetailsUpdate,
@@ -27,49 +26,8 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
-function needsTutorOnboarding(user: User): boolean {
-  if (user.user_type !== "tutor") return false;
-  
-  // If onboarding is already complete, check for document verification
-  if (user.onboarding_complete) {
-    // If document verification is pending, need onboarding
-    if (user.document_verification === 'pending') return true;
-    // Otherwise, no onboarding needed
-    return false;
-  }
-  
-  const td = user.tutor_details;
-  
-  // If no tutor details at all, need onboarding
-  if (!td) return true;
-  
-  // If register fees not paid, need to show payment page
-  if (!td.register_fees_paid) return true;
-  
-  // If no bank details, need to collect bank details
-  if (!td.bank_details) return true;
-  
-  // If no DOB, need to collect personal details
-  if (!user.dob) return true;
-  
-  // All prerequisites satisfied -> no onboarding needed
-  return false;
-}
-
-function needsStudentOnboarding(user: User): boolean {
-  if (user.user_type !== "student") return false;
-  
-  // If onboarding is already complete, no need for onboarding
-  if (user.onboarding_complete) return false;
-  
-  // If no DOB, need to collect personal details
-  if (!user.dob) return true;
-  
-  return true; // Need onboarding if we reach here
-}
-
 export const useAuthStore = create<AuthState>()(
-  (set, get) => ({
+  (set) => ({
       loading: false,
       showLoginModal: false,
       showRoleModal: false,

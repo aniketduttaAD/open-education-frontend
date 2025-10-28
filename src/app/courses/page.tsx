@@ -10,8 +10,6 @@ import { coursesApi, Course, CourseFilters } from "@/lib/api/courses";
 import {
   BookOpen,
   TrendingUp,
-  Star,
-  Users,
   Filter,
   Search,
   Grid,
@@ -32,10 +30,6 @@ export default function CoursesPage() {
   const [totalCourses, setTotalCourses] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    fetchCourses();
-  }, []);
-
   const fetchCourses = async (searchFilters?: CourseFilters) => {
     try {
       setLoading(true);
@@ -46,10 +40,22 @@ export default function CoursesPage() {
       const transformedCourses = response.data.courses.map((course) => {
         // Calculate real data from API response
         const totalSections = course.sections?.length || 0;
-        const totalVideos = course.sections?.reduce((sum, section) => sum + (section.subtopics?.length || 0), 0) || 0;
-        const totalQuizzes = course.sections?.reduce((sum, section) => sum + (section.quizzes?.length || 0), 0) || 0;
-        const totalFlashcards = course.sections?.reduce((sum, section) => sum + (section.flashcards?.length || 0), 0) || 0;
-        
+        const totalVideos =
+          course.sections?.reduce(
+            (sum, section) => sum + (section.subtopics?.length || 0),
+            0
+          ) || 0;
+        const totalQuizzes =
+          course.sections?.reduce(
+            (sum, section) => sum + (section.quizzes?.length || 0),
+            0
+          ) || 0;
+        const totalFlashcards =
+          course.sections?.reduce(
+            (sum, section) => sum + (section.flashcards?.length || 0),
+            0
+          ) || 0;
+
         return {
           ...course,
           description: course.description || "No description available",
@@ -60,7 +66,7 @@ export default function CoursesPage() {
           estimated_duration: totalVideos * 15, // Estimate 15 minutes per video
           is_featured: false, // Will be updated when API provides this data
           // Add missing fields for compatibility
-          tutor_id: course.tutor?.id || '',
+          tutor_id: course.tutor?.id || "",
           status: "published" as const,
           total_ratings: 0, // Will be updated when API provides this data
           completion_rate: null, // Will be updated when API provides this data
@@ -77,8 +83,8 @@ export default function CoursesPage() {
             totalSubtopics: totalVideos,
             totalVideos,
             totalQuizzes,
-            totalFlashcards
-          }
+            totalFlashcards,
+          },
         };
       });
 
@@ -95,11 +101,10 @@ export default function CoursesPage() {
     }
   };
 
-  const handleFiltersChange = (newFilters: CourseFilters) => {
-    const updatedFilters = { ...filters, ...newFilters, page: 1 };
-    setFilters(updatedFilters);
-    fetchCourses(updatedFilters);
-  };
+  useEffect(() => {
+    fetchCourses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSortChange = (newSortBy: string) => {
     setSortBy(newSortBy);
@@ -109,7 +114,7 @@ export default function CoursesPage() {
   };
 
   const applySorting = (currentSortBy: string) => {
-    let sorted = [...courses];
+    const sorted = [...courses];
 
     switch (currentSortBy) {
       case "newest":
@@ -160,26 +165,35 @@ export default function CoursesPage() {
   const getStats = () => {
     // Calculate real stats from the courses data
     const totalCoursesCount = totalCourses || courses.length;
-    
+
     // Calculate total sections and videos from all courses
-    const totalSections = courses.reduce((sum, course) => sum + (course.sections?.length || 0), 0);
+    const totalSections = courses.reduce(
+      (sum, course) => sum + (course.sections?.length || 0),
+      0
+    );
     const totalVideos = courses.reduce((sum, course) => {
-      return sum + (course.sections?.reduce((sectionSum, section) => 
-        sectionSum + (section.subtopics?.length || 0), 0) || 0);
+      return (
+        sum +
+        (course.sections?.reduce(
+          (sectionSum, section) =>
+            sectionSum + (section.subtopics?.length || 0),
+          0
+        ) || 0)
+      );
     }, 0);
-    
+
     // Calculate featured courses (courses with content)
-    const featuredCourses = courses.filter(course => 
-      course.sections && course.sections.length > 0
+    const featuredCourses = courses.filter(
+      (course) => course.sections && course.sections.length > 0
     ).length;
-    
+
     return {
       totalCourses: totalCoursesCount,
       totalStudents: 0, // Will be updated when API provides this data
       avgRating: 0, // Will be updated when API provides this data
       featuredCourses,
       totalSections,
-      totalVideos
+      totalVideos,
     };
   };
 
@@ -259,9 +273,7 @@ export default function CoursesPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Total Videos</p>
-                    <p className="text-lg font-semibold">
-                      {stats.totalVideos}
-                    </p>
+                    <p className="text-lg font-semibold">{stats.totalVideos}</p>
                   </div>
                 </div>
               </CardContent>
@@ -276,7 +288,7 @@ export default function CoursesPage() {
                   <div>
                     <p className="text-sm text-gray-600">Featured</p>
                     <p className="text-lg font-semibold">
-                      {stats.featuredCourses || 'N/A'}
+                      {stats.featuredCourses || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -367,8 +379,6 @@ export default function CoursesPage() {
         >
           <CourseGrid
             courses={filteredCourses}
-            filters={filters}
-            onFiltersChange={handleFiltersChange}
             loading={loading}
           />
         </motion.div>

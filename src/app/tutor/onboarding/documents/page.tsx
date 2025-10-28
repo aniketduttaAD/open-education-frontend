@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Shield } from "lucide-react";
 import { useUserStore } from "@/store/userStore";
 import { useVerificationStore } from "@/store/verificationStore";
 import { usersApi } from "@/lib/api/users";

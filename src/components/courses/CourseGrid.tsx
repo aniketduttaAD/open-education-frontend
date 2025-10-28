@@ -1,27 +1,22 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { CourseCard } from './CourseCard'
 import { CourseFilters } from '@/lib/types'
 import { Course } from '@/lib/api/courses'
-import { Card, CardContent } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 
 interface CourseGridProps {
   courses: Course[]
   filters?: CourseFilters
-  onFiltersChange?: (filters: CourseFilters) => void
   loading?: boolean
 }
 
-export function CourseGrid({ courses, filters, onFiltersChange, loading = false }: CourseGridProps) {
+export function CourseGrid({ courses, loading = false }: CourseGridProps) {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>(courses)
 
   // Update filtered courses when courses prop changes
   useEffect(() => {
     setFilteredCourses(courses)
   }, [courses])
-
-  const hasActiveFilters = filters ? Object.values(filters).some(v => v !== undefined) : false
 
   if (loading) {
     return (
@@ -58,11 +53,6 @@ export function CourseGrid({ courses, filters, onFiltersChange, loading = false 
         <p className="text-gray-600">
           {filteredCourses.length} course{filteredCourses.length !== 1 ? 's' : ''} found
         </p>
-        {hasActiveFilters && (
-          <p className="text-sm text-gray-500">
-            Filtered from {courses.length} total courses
-          </p>
-        )}
       </div>
 
       {/* Course Grid */}

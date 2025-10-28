@@ -23,8 +23,9 @@ export const useRoadmapFinalization = () => {
       setResult(resp);
       setProgress(100);
       setCurrentStep('Generation completed!');
-    } catch (e: any) {
-      setError(e?.message || 'Failed to finalize roadmap');
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to finalize roadmap';
+      setError(message);
       setCurrentStep('Generation failed');
     } finally {
       setIsGenerating(false);

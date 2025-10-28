@@ -298,10 +298,8 @@ const CourseContent: React.FC<CourseContentProps> = ({
                           subtopic.video_url && (
                             <div className="mb-4">
                               <VideoPlayer
-                                courseId={courseId}
-                                sectionId={section.id}
-                                subtopicId={subtopic.id}
-                                videoTitle={subtopic.title}
+                                videoUrl={subtopic.video_url}
+                                title={subtopic.title}
                                 className="rounded-lg"
                               />
                             </div>

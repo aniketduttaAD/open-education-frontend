@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CourseGeneration } from "@/components/course/CourseGeneration";
 import { RoadmapDisplayWithFinalize } from "@/components/roadmap/RoadmapDisplayWithFinalize";
@@ -27,8 +27,13 @@ export default function CourseGenerationExample() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Redirect if not authenticated or not a tutor
+  useEffect(() => {
+    if (!user || user.user_type !== "tutor") {
+      router.push("/login");
+    }
+  }, [user, router]);
+
   if (!user || user.user_type !== "tutor") {
-    router.push("/login");
     return null;
   }
 
@@ -53,7 +58,7 @@ export default function CourseGenerationExample() {
   };
 
   // Handle course generation complete
-  const handleGenerationComplete = (courseId: string) => {
+  const handleGenerationComplete = () => {
     toast.success("Course generation completed successfully!");
     setCurrentStep("content");
   };
@@ -72,7 +77,11 @@ export default function CourseGenerationExample() {
       await saveChangesToBackend();
       toast.success("Changes saved successfully!");
     } catch (error: unknown) {
-      toast.error(`Failed to save changes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(
+        `Failed to save changes: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     } finally {
       setIsSaving(false);
     }

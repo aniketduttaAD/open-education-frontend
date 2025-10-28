@@ -46,12 +46,6 @@ export default function TutorCoursesPage() {
     document.title = "Course Management - OpenEducation";
   }, []);
 
-  useEffect(() => {
-    if (user?.user_type === "tutor" && user.id) {
-      fetchCourses();
-    }
-  }, [user, page]);
-
   const fetchCourses = async () => {
     if (!user?.id) return;
 
@@ -61,12 +55,20 @@ export default function TutorCoursesPage() {
       const response = await coursesApi.getTutorCourses(user.id, page, limit);
       setCourses(response.courses);
       setTotal(response.total);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch courses");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch courses";
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.user_type === "tutor" && user.id) {
+      fetchCourses();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, page]);
 
   const handleCreateCourse = () => {
     router.push("/tutor/courses/create");
@@ -74,10 +76,6 @@ export default function TutorCoursesPage() {
 
   const handleViewCourse = (courseId: string) => {
     router.push(`/courses/${courseId}`);
-  };
-
-  const handleEditCourse = (courseId: string) => {
-    router.push(`/tutor/courses/${courseId}/edit`);
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -93,8 +91,9 @@ export default function TutorCoursesPage() {
       setDeletingCourseId(courseId);
       await coursesApi.deleteCourse(courseId);
       await fetchCourses();
-    } catch (err: any) {
-      alert(err.message || "Failed to delete course");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete course";
+      alert(message);
     } finally {
       setDeletingCourseId(null);
     }

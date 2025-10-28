@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ChevronDown, ChevronRight, Play, Clock, CheckCircle, X } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/Card'
+import { ChevronDown, Clock, CheckCircle, X } from 'lucide-react' 
+import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
 interface VideoAccordionProps {
@@ -14,10 +14,22 @@ interface VideoAccordionProps {
       id: string
       title: string
       status: string
-      video_url: string
+      video_url: string | null
     }>
-    quizzes?: Array<any>
-    flashcards?: Array<any>
+    quizzes?: Array<{
+      id: string
+      title?: string
+      course_id?: string
+      section_id?: string
+    }>
+    flashcards?: Array<{
+      id: string
+      front?: string
+      back?: string
+      course_id?: string
+      section_id?: string
+      index?: number
+    }>
   }>
 }
 
@@ -123,7 +135,9 @@ export const VideoAccordion: React.FC<VideoAccordionProps> = ({ sections }) => {
                           alert('Error loading video. Please check the video URL.')
                         }}
                       >
-                        <source src={subtopic.video_url} type="video/mp4" />
+                        {subtopic.video_url ? (
+                          <source src={subtopic.video_url} type="video/mp4" />
+                        ) : null}
                         Your browser does not support the video tag.
                       </video>
                     </div>

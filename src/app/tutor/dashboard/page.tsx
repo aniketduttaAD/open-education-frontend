@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { GraduationCap, Users, IndianRupee, Star, Plus, BookOpen, Download, FileText, Calendar } from 'lucide-react'
-import { User as UserType, TutorDetails, TutorDocumentItem } from '@/lib/userTypes'
+import { TutorDetails } from '@/lib/userTypes'
 import { useUserStore } from '@/store/userStore'
 import { usersApi } from '@/lib/api/users'
 

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { RoleSelectionModal } from '@/components/auth/RoleSelectionModal'
 import { usersApi } from '@/lib/api/users'
 import { useToast } from '@/components/ui/ToastProvider'
 
@@ -12,7 +11,6 @@ export default function AuthCallbackPage() {
   const { showToast } = useToast()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showRoleSelection, setShowRoleSelection] = useState(false)
 
   useEffect(() => {
     const run = async () => {
@@ -29,12 +27,10 @@ export default function AuthCallbackPage() {
 
         // If role not selected yet, open role selection
         if (!user.user_type) {
-          setShowRoleSelection(true)
           setLoading(false)
           return
         }
 
-        // Role already selected -> send user to home (header will route appropriately)
         showToast('You are signed in', 'success')
         router.push('/')
       } catch (err: unknown) {

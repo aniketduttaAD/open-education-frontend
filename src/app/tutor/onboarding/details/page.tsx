@@ -78,7 +78,7 @@ export default function TutorDetailsPage() {
       qualificationsText: typeof td.qualifications === 'string' ? td.qualifications : prev.qualificationsText,
       useStructuredQualifications: typeof td.qualifications === 'object',
       qualificationsObj: typeof td.qualifications === 'object' ? (() => {
-        const q: any = td.qualifications;
+        const q = td.qualifications as { education?: string; degree?: string; certifications?: string[]; year?: string | number; experience_years?: number };
         const education = (q?.education ?? q?.degree ?? "") as string;
         const certificationsText = Array.isArray(q?.certifications) ? q.certifications.join(', ') : "";
         const experienceYears = typeof q?.experience_years === 'number' ? q.experience_years : (Number(q?.year) || 0);

@@ -56,14 +56,14 @@ export const useCourseGeneration = (
         progress: 100,
         currentTask: "Generation completed!",
         phase: "completed",
-        sessionId: response.roadmapId,
-        totalSections: response.totalSections,
-        totalSubtopics: response.totalSubtopics,
-        courseId: response.courseId,
+        sessionId: response.data.sessionId,
+        totalSections: response.data.totalSections,
+        totalSubtopics: response.data.totalSubtopics,
+        courseId: response.data.id,
       }));
 
       if (options.onComplete) {
-        options.onComplete(response.courseId);
+        options.onComplete(response.data.id);
       }
     } catch (error: unknown) {
       console.error("Failed to start course generation:", error);
@@ -85,6 +85,7 @@ export const useCourseGeneration = (
     } finally {
       isGeneratingRef.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.roadmapId, options.courseId, options.onError]);
 
   const stopGeneration = useCallback(() => {
@@ -125,5 +126,6 @@ export const useCourseGeneration = (
     startGeneration,
     stopGeneration,
     resetGeneration,
+    isConnected: true, // Always connected for synchronous API calls
   };
 };

@@ -9,11 +9,11 @@ import { ToastProvider } from "@/components/ui/ToastProvider";
 import { AdminGuard } from "@/components/auth/AdminGuard";
 import { adminApi } from "@/lib/api/admin";
 import type { OwnerToken, PendingTutor, VerificationStats } from "@/lib/types";
+import Image from "next/image";
 
 // TutorAccordion Component
 interface TutorAccordionProps {
   tutor: PendingTutor;
-  index: number;
   onApprove: () => void;
   onReject: () => void;
   loading: boolean;
@@ -21,7 +21,6 @@ interface TutorAccordionProps {
 
 function TutorAccordion({
   tutor,
-  index,
   onApprove,
   onReject,
   loading,
@@ -37,10 +36,13 @@ function TutorAccordion({
       >
         <div className="flex items-center gap-4">
           {tutor.image && (
-            <img
-              src={tutor.image}
+            <Image
+              src={tutor.image as string}
               alt={tutor.name}
               className="w-12 h-12 rounded-full object-cover"
+              width={48}
+              height={48}
+              unoptimized
             />
           )}
           <div>
@@ -389,11 +391,6 @@ export default function AdminPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Auto-generate token on page load for testing
-  useEffect(() => {
-    getOwnerToken();
-  }, []);
-
   const getOwnerToken = async () => {
     setLoading(true);
     try {
@@ -414,6 +411,12 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
+
+  // Auto-generate token on page load for testing
+  useEffect(() => {
+    getOwnerToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getOwnerInfo = async () => {
     if (!ownerToken || !ownerToken.token) {
@@ -716,11 +719,10 @@ export default function AdminPage() {
 
                 {pendingTutors.length > 0 ? (
                   <div className="space-y-2">
-                    {pendingTutors.map((tutor, index) => (
+                    {pendingTutors.map((tutor) => (
                       <TutorAccordion
                         key={tutor.id}
                         tutor={tutor}
-                        index={index}
                         onApprove={() => approveTutor(tutor.id)}
                         onReject={() => {
                           const reason = prompt("Enter rejection reason:");

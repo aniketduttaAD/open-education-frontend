@@ -4,11 +4,12 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { VideoPlayer } from "@/components/course/VideoPlayer";
+import { VideoAccordion } from "@/components/course/VideoAccordion";
 import { QuizPreview } from "@/components/course/QuizPreview";
 import { FlashcardPreview } from "@/components/course/FlashcardPreview";
 import { roadmapApi } from "@/lib/api/roadmap";
 import type { PublishCourseResponse } from "@/lib/types/roadmap";
+import { Play } from "lucide-react";
 
 interface CourseGenerationFlowProps {
   roadmapId: string;
@@ -307,40 +308,32 @@ export const CourseGenerationFlow: React.FC<CourseGenerationFlowProps> = ({
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Content Preview</h3>
 
-                {generationData.sections.map((section) => (
-                  <Card key={section.id} className="p-4">
-                    <h4 className="font-semibold mb-2">{section.title}</h4>
-                    <div className="space-y-2">
-                      {section.subtopics.map((subtopic) => (
-                        <div
-                          key={subtopic.id}
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                        >
-                          <span>{subtopic.title}</span>
-                          {subtopic.video_url && (
-                            <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
-                              Video Ready
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                ))}
-
-                {/* Video Previews */}
-                {generationData.videos.length > 0 && (
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold">Video Previews</h4>
-                    {generationData.videos.slice(0, 2).map((video) => (
-                      <VideoPlayer
-                        key={video.id}
-                        videoUrl={video.url}
-                        title={video.title}
-                      />
-                    ))}
-                  </div>
-                )}
+                {/* Video Lessons Accordion (same as course details) */}
+                <Card>
+                  <CardHeader>
+                    <h2 className="text-xl font-semibold flex items-center">
+                      <Play className="w-5 h-5 mr-2" />
+                      Video Lessons ({generationData.generationSummary.totalVideos})
+                    </h2>
+                    <p className="text-gray-600">
+                      Click on any section to expand and view video lessons
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <VideoAccordion
+                      sections={generationData.sections.map((s) => ({
+                        ...s,
+                        description: undefined,
+                        subtopics: s.subtopics.map((st) => ({
+                          id: st.id,
+                          title: st.title,
+                          video_url: st.video_url,
+                          status: st.video_url ? "completed" : "in_progress",
+                        })),
+                      }))}
+                    />
+                  </CardContent>
+                </Card>
 
                 {/* Quiz Previews */}
                 {generationData.quizzes.length > 0 && (

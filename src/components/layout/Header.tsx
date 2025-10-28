@@ -180,7 +180,7 @@ export function Header() {
                       </Link>
                       {user.user_type === 'tutor' ? (
                         <>
-                          <Link href='/tutor/dashboard' className='block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100' onClick={() => setIsProfileOpen(false)}>
+                          <Link href='/tutor/courses' className='block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100' onClick={() => setIsProfileOpen(false)}>
                             My Courses
                           </Link>
                           <Link href='/tutor/earnings' className='block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100' onClick={() => setIsProfileOpen(false)}>
@@ -189,7 +189,7 @@ export function Header() {
                         </>
                       ) : (
                         <>
-                          <Link href='/student' className='block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100' onClick={() => setIsProfileOpen(false)}>
+                          <Link href='/courses' className='block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100' onClick={() => setIsProfileOpen(false)}>
                             Browse Courses
                           </Link>
                           <Link href='/wishlist' className='block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100' onClick={() => setIsProfileOpen(false)}>

@@ -13,95 +13,32 @@ import {
   Target,
   Edit3,
 } from "lucide-react";
-
-interface UserProfile {
-  id: string;
-  email: string;
-  name: string;
-  image: string;
-  gender: string | null;
-  bio: string | null;
-  dob: string | null;
-  user_type: "student" | "tutor";
-  tutor_details: {
-    bio?: string | null;
-  } | null;
-  student_details: {
-    dob: string;
-    degree: string;
-    gender: string;
-    interests: string[];
-    college_name: string;
-    learning_goals: string[];
-    education_level: string;
-    experience_level: string;
-    preferred_languages: string[];
-  } | null;
-  onboarding_complete: boolean;
-  document_verification: unknown | null;
-  created_at: string;
-  updated_at: string;
-}
+import { usersApi } from "@/lib/api/users";
+import { useUserStore } from "@/store/userStore";
+import type { User as UserType } from "@/lib/userTypes";
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, userLoading, userError, fetchUser } = useUserStore();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = "Profile - OpenEducation";
 
-    // Simulate API call with the provided data
-    const fetchProfile = async () => {
+    const loadProfile = async () => {
       try {
-        // In real implementation, this would be an API call
-        const mockResponse = {
-          success: true,
-          data: {
-            id: "8af0f5b5-c61c-4649-b45c-ac01b5d2ef03",
-            email: "helloaniketdutta@gmail.com",
-            name: "Aniket Dutta",
-            image:
-              "https://lh3.googleusercontent.com/a/ACg8ocJ2xBYsHakSnflfsWmTgd8fi69D2G6v2YIYA8e8hMenC3LY2g=s96-c",
-            gender: null,
-            bio: null,
-            dob: null,
-            user_type: "student",
-            tutor_details: null,
-            student_details: {
-              dob: "2002-07-02",
-              degree: "mca, bca",
-              gender: "male",
-              interests: ["mathematics"],
-              college_name: "srm university",
-              learning_goals: ["python learing"],
-              education_level: "undergraduate",
-              experience_level: "beginer",
-              preferred_languages: ["english"],
-            },
-            onboarding_complete: true,
-            document_verification: null,
-            created_at: "2025-10-27T23:24:51.004Z",
-            updated_at: "2025-10-27T23:36:24.170Z",
-          },
-          message: "Operation completed successfully",
-          timestamp: "2025-10-27T23:38:21.925Z",
-        };
-
-        const data = mockResponse.data;
-        const normalized: UserProfile = {
-          ...data,
-          user_type: data.user_type === "tutor" ? "tutor" : "student",
-        };
-        setProfile(normalized);
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-      } finally {
-        setLoading(false);
+        setError(null);
+        // If user is not already loaded, fetch it
+        if (!user) {
+          await fetchUser();
+        }
+      } catch (err) {
+        console.error("Error loading profile:", err);
+        setError(err instanceof Error ? err.message : "Failed to load profile");
       }
     };
 
-    fetchProfile();
-  }, []);
+    loadProfile();
+  }, [user, fetchUser]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -111,7 +48,7 @@ export default function ProfilePage() {
     });
   };
 
-  if (loading) {
+  if (userLoading) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
         <div className="text-center">
@@ -122,11 +59,29 @@ export default function ProfilePage() {
     );
   }
 
-  if (!profile) {
+  if (userError || error) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Failed to load profile</p>
+          <p className="text-red-600 mb-4">Failed to load profile</p>
+          <p className="text-gray-600 text-sm">{userError || error}</p>
+          <Button 
+            onClick={() => fetchUser()} 
+            className="mt-4"
+            variant="primary"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">No profile data available</p>
         </div>
       </div>
     );
@@ -150,8 +105,8 @@ export default function ProfilePage() {
               <CardHeader>
                 <div className="flex items-center space-x-4">
                   <Image
-                    src={profile.image}
-                    alt={profile.name}
+                    src={user.image || "/logo.png"}
+                    alt={user.name}
                     className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
                     width={80}
                     height={80}
@@ -159,21 +114,21 @@ export default function ProfilePage() {
                   />
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">
-                      {profile.name}
+                      {user.name}
                     </h2>
                     <p className="text-gray-600 capitalize">
-                      {profile.user_type}
+                      {user.user_type}
                     </p>
                     <div className="flex items-center mt-1">
                       <div
                         className={`w-2 h-2 rounded-full mr-2 ${
-                          profile.onboarding_complete
+                          user.onboarding_complete
                             ? "bg-green-500"
                             : "bg-yellow-500"
                         }`}
                       ></div>
                       <span className="text-sm text-gray-600">
-                        {profile.onboarding_complete
+                        {user.onboarding_complete
                           ? "Profile Complete"
                           : "Profile Incomplete"}
                       </span>
@@ -206,7 +161,7 @@ export default function ProfilePage() {
                     <label className="text-sm font-medium text-gray-600">
                       Full Name
                     </label>
-                    <p className="text-gray-900">{profile.name}</p>
+                    <p className="text-gray-900">{user.name}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">
@@ -214,7 +169,7 @@ export default function ProfilePage() {
                     </label>
                     <p className="text-gray-900 flex items-center">
                       <Mail className="w-4 h-4 mr-1" />
-                      {profile.email}
+                      {user.email}
                     </p>
                   </div>
                   <div>
@@ -222,8 +177,8 @@ export default function ProfilePage() {
                       Gender
                     </label>
                     <p className="text-gray-900 capitalize">
-                      {profile.student_details?.gender ||
-                        profile.gender ||
+                      {user.student_details?.gender ||
+                        user.gender ||
                         "Not specified"}
                     </p>
                   </div>
@@ -233,8 +188,10 @@ export default function ProfilePage() {
                     </label>
                     <p className="text-gray-900 flex items-center">
                       <Calendar className="w-4 h-4 mr-1" />
-                      {profile.student_details?.dob
-                        ? formatDate(profile.student_details.dob)
+                      {user.student_details?.dob
+                        ? formatDate(user.student_details.dob)
+                        : user.dob
+                        ? formatDate(user.dob)
                         : "Not specified"}
                     </p>
                   </div>
@@ -243,7 +200,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Academic Information */}
-            {profile.user_type === "student" && profile.student_details && (
+            {user.user_type === "student" && user.student_details && (
               <Card>
                 <CardHeader>
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -258,7 +215,7 @@ export default function ProfilePage() {
                         Degree
                       </label>
                       <p className="text-gray-900">
-                        {profile.student_details.degree}
+                        {user.student_details.degree}
                       </p>
                     </div>
                     <div>
@@ -267,7 +224,7 @@ export default function ProfilePage() {
                       </label>
                       <p className="text-gray-900 flex items-center">
                         <MapPin className="w-4 h-4 mr-1" />
-                        {profile.student_details.college_name}
+                        {user.student_details.college_name}
                       </p>
                     </div>
                     <div>
@@ -275,7 +232,7 @@ export default function ProfilePage() {
                         Education Level
                       </label>
                       <p className="text-gray-900 capitalize">
-                        {profile.student_details.education_level}
+                        {user.student_details.education_level}
                       </p>
                     </div>
                     <div>
@@ -283,7 +240,7 @@ export default function ProfilePage() {
                         Experience Level
                       </label>
                       <p className="text-gray-900 capitalize">
-                        {profile.student_details.experience_level}
+                        {user.student_details.experience_level}
                       </p>
                     </div>
                   </div>
@@ -291,8 +248,8 @@ export default function ProfilePage() {
               </Card>
             )}
 
-            {/* Learning Preferences */}
-            {profile.user_type === "student" && profile.student_details && (
+            {/* Learning Preferences - Student Only */}
+            {user.user_type === "student" && user.student_details && (
               <Card>
                 <CardHeader>
                   <h3 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -306,7 +263,7 @@ export default function ProfilePage() {
                       Interests
                     </label>
                     <div className="flex flex-wrap gap-2 mt-1">
-                      {profile.student_details.interests.map(
+                      {user.student_details.interests?.map(
                         (interest, index) => (
                           <span
                             key={index}
@@ -315,7 +272,7 @@ export default function ProfilePage() {
                             {interest}
                           </span>
                         )
-                      )}
+                      ) || <span className="text-gray-500 text-sm">No interests specified</span>}
                     </div>
                   </div>
                   <div>
@@ -323,7 +280,7 @@ export default function ProfilePage() {
                       Learning Goals
                     </label>
                     <div className="flex flex-wrap gap-2 mt-1">
-                      {profile.student_details.learning_goals.map(
+                      {user.student_details.learning_goals?.map(
                         (goal, index) => (
                           <span
                             key={index}
@@ -332,7 +289,7 @@ export default function ProfilePage() {
                             {goal}
                           </span>
                         )
-                      )}
+                      ) || <span className="text-gray-500 text-sm">No learning goals specified</span>}
                     </div>
                   </div>
                   <div>
@@ -340,7 +297,7 @@ export default function ProfilePage() {
                       Preferred Languages
                     </label>
                     <div className="flex flex-wrap gap-2 mt-1">
-                      {profile.student_details.preferred_languages.map(
+                      {user.student_details.preferred_languages?.map(
                         (language, index) => (
                           <span
                             key={index}
@@ -349,7 +306,142 @@ export default function ProfilePage() {
                             {language}
                           </span>
                         )
-                      )}
+                      ) || <span className="text-gray-500 text-sm">No preferred languages specified</span>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Professional Information - Tutor Only */}
+            {user.user_type === "tutor" && user.tutor_details && (
+              <Card>
+                <CardHeader>
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <GraduationCap className="w-5 h-5 mr-2 text-blue-600" />
+                    Professional Information
+                  </h3>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Bio
+                    </label>
+                    <p className="text-gray-900">
+                      {user.tutor_details.bio || "No bio provided"}
+                    </p>
+                  </div>
+                  
+                  {user.tutor_details.teaching_experience && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">
+                        Teaching Experience
+                      </label>
+                      <p className="text-gray-900">
+                        {user.tutor_details.teaching_experience}
+                      </p>
+                    </div>
+                  )}
+
+                  {user.tutor_details.specializations && user.tutor_details.specializations.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">
+                        Specializations
+                      </label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {user.tutor_details.specializations.map(
+                          (specialization, index) => (
+                            <span
+                              key={index}
+                              className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                            >
+                              {specialization}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {user.tutor_details.languages_spoken && user.tutor_details.languages_spoken.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">
+                        Languages Spoken
+                      </label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {user.tutor_details.languages_spoken.map(
+                          (language, index) => (
+                            <span
+                              key={index}
+                              className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full"
+                            >
+                              {language}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {user.tutor_details.expertise_areas && user.tutor_details.expertise_areas.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">
+                        Expertise Areas
+                      </label>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {user.tutor_details.expertise_areas.map(
+                          (area, index) => (
+                            <span
+                              key={index}
+                              className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full"
+                            >
+                              {area}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Verification Status
+                    </label>
+                    <div className="flex items-center mt-1">
+                      <span
+                        className={`px-3 py-1 text-sm rounded-full ${
+                          user.tutor_details.verification_status === "verified"
+                            ? "bg-green-100 text-green-800"
+                            : user.tutor_details.verification_status === "rejected"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {user.tutor_details.verification_status === "verified"
+                          ? "✓ Verified"
+                          : user.tutor_details.verification_status === "rejected"
+                          ? "✗ Rejected"
+                          : "⏳ Pending"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">
+                      Registration Fees
+                    </label>
+                    <div className="flex items-center mt-1">
+                      <span
+                        className={`px-3 py-1 text-sm rounded-full ${
+                          user.tutor_details.register_fees_paid
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {user.tutor_details.register_fees_paid
+                          ? "✓ Paid"
+                          : "✗ Not Paid"}
+                      </span>
                     </div>
                   </div>
                 </CardContent>

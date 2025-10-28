@@ -1,140 +1,196 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { CourseGrid } from '@/components/courses/CourseGrid'
-import { Card, CardContent } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { Course, CourseFilters } from '@/lib/types'
-import { 
-  BookOpen, 
-  TrendingUp, 
-  Star, 
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { CourseGrid } from "@/components/courses/CourseGrid";
+import { Card, CardContent } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { coursesApi, Course, CourseFilters } from "@/lib/api/courses";
+import {
+  BookOpen,
+  TrendingUp,
+  Star,
   Users,
   Filter,
   Search,
   Grid,
-  List
-} from 'lucide-react'
+  List,
+  Play,
+} from "lucide-react";
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<Course[]>([])
-  const [filteredCourses, setFilteredCourses] = useState<Course[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState<CourseFilters>({})
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [sortBy, setSortBy] = useState<string>('newest')
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<CourseFilters>({
+    page: 1,
+    limit: 20,
+  });
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [totalCourses, setTotalCourses] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    fetchCourses()
-  }, [])
+    fetchCourses();
+  }, []);
 
-  const fetchCourses = async () => {
+  const fetchCourses = async (searchFilters?: CourseFilters) => {
     try {
-      setCourses([])
-      setFilteredCourses([])
+      setLoading(true);
+      const currentFilters = searchFilters || filters;
+      const response = await coursesApi.getAllCourses(currentFilters);
+
+      // Transform the API response to match frontend expectations
+      const transformedCourses = response.data.courses.map((course) => {
+        // Calculate real data from API response
+        const totalSections = course.sections?.length || 0;
+        const totalVideos = course.sections?.reduce((sum, section) => sum + (section.subtopics?.length || 0), 0) || 0;
+        const totalQuizzes = course.sections?.reduce((sum, section) => sum + (section.quizzes?.length || 0), 0) || 0;
+        const totalFlashcards = course.sections?.reduce((sum, section) => sum + (section.flashcards?.length || 0), 0) || 0;
+        
+        return {
+          ...course,
+          description: course.description || "No description available",
+          price: course.price_inr || 0,
+          // Use real data instead of mock data
+          avg_rating: null, // Will be updated when API provides this data
+          total_enrollments: 0, // Will be updated when API provides this data
+          estimated_duration: totalVideos * 15, // Estimate 15 minutes per video
+          is_featured: false, // Will be updated when API provides this data
+          // Add missing fields for compatibility
+          tutor_id: course.tutor?.id || '',
+          status: "published" as const,
+          total_ratings: 0, // Will be updated when API provides this data
+          completion_rate: null, // Will be updated when API provides this data
+          difficulty_level: "intermediate", // Default for now
+          category: "general",
+          tags: course.tutor?.expertise_areas || ["programming"],
+          total_revisions_requested: 0,
+          max_revisions_allowed: 3,
+          thumbnail_url: null,
+          published_at: course.created_at,
+          // Add summary data
+          summary: {
+            totalSections,
+            totalSubtopics: totalVideos,
+            totalVideos,
+            totalQuizzes,
+            totalFlashcards
+          }
+        };
+      });
+
+      setCourses(transformedCourses);
+      setFilteredCourses(transformedCourses);
+      setTotalCourses(response.data.total);
+      setCurrentPage(response.data.page);
     } catch (error) {
-      console.error('Error fetching courses:', error)
+      console.error("Error fetching courses:", error);
+      setCourses([]);
+      setFilteredCourses([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleFiltersChange = (newFilters: CourseFilters) => {
-    setFilters(newFilters)
-    applyFiltersAndSort(newFilters, sortBy)
-  }
+    const updatedFilters = { ...filters, ...newFilters, page: 1 };
+    setFilters(updatedFilters);
+    fetchCourses(updatedFilters);
+  };
 
   const handleSortChange = (newSortBy: string) => {
-    setSortBy(newSortBy)
-    applyFiltersAndSort(filters, newSortBy)
-  }
+    setSortBy(newSortBy);
+    // For now, we'll handle sorting on the frontend
+    // In a real app, you might want to send sort parameters to the API
+    applySorting(newSortBy);
+  };
 
-  const applyFiltersAndSort = (currentFilters: CourseFilters, currentSortBy: string) => {
-    let filtered = [...courses]
+  const applySorting = (currentSortBy: string) => {
+    let sorted = [...courses];
 
-    // Apply search filter
-    if (currentFilters.search) {
-      const searchLower = currentFilters.search.toLowerCase()
-      filtered = filtered.filter(course => 
-        course.title.toLowerCase().includes(searchLower) ||
-        course.description.toLowerCase().includes(searchLower)
-      )
-    }
-
-    // Apply price range filter
-    if (currentFilters.priceRange) {
-      filtered = filtered.filter(course => 
-        course.price >= currentFilters.priceRange!.min && 
-        course.price <= currentFilters.priceRange!.max
-      )
-    }
-
-    // Apply rating filter
-    if (currentFilters.rating) {
-      filtered = filtered.filter(course => 
-        (course.avg_rating || 0) >= currentFilters.rating!
-      )
-    }
-
-    // Apply duration filter
-    if (currentFilters.duration) {
-      filtered = filtered.filter(course => {
-        const duration = course.estimated_duration || 0
-        switch (currentFilters.duration) {
-          case 'short': return duration <= 60
-          case 'medium': return duration > 60 && duration <= 300
-          case 'long': return duration > 300
-          default: return true
-        }
-      })
-    }
-
-    // Apply sorting
     switch (currentSortBy) {
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        break
-      case 'oldest':
-        filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-        break
-      case 'price-low':
-        filtered.sort((a, b) => a.price - b.price)
-        break
-      case 'price-high':
-        filtered.sort((a, b) => b.price - a.price)
-        break
-      case 'rating':
-        filtered.sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0))
-        break
-      case 'popular':
-        filtered.sort((a, b) => (b.total_enrollments || 0) - (a.total_enrollments || 0))
-        break
+      case "newest":
+        sorted.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        break;
+      case "oldest":
+        sorted.sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        break;
+      case "price-low":
+        sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
+        break;
+      case "price-high":
+        sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+        break;
+      case "rating":
+        sorted.sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0));
+        break;
+      case "popular":
+        sorted.sort(
+          (a, b) => (b.total_enrollments || 0) - (a.total_enrollments || 0)
+        );
+        break;
       default:
-        break
+        break;
     }
 
-    setFilteredCourses(filtered)
-  }
+    setFilteredCourses(sorted);
+  };
+
+  const handleSearch = (searchTerm: string) => {
+    const updatedFilters = { ...filters, search: searchTerm, page: 1 };
+    setFilters(updatedFilters);
+    fetchCourses(updatedFilters);
+  };
+
+  const handlePageChange = (page: number) => {
+    const updatedFilters = { ...filters, page };
+    setFilters(updatedFilters);
+    fetchCourses(updatedFilters);
+  };
 
   const getStats = () => {
-    const totalCourses = courses.length
-    const totalStudents = courses.reduce((sum, course) => sum + (course.total_enrollments || 0), 0)
-    const avgRating = courses.reduce((sum, course) => sum + (course.avg_rating || 0), 0) / totalCourses || 0
-    const featuredCourses = courses.filter(course => course.is_featured).length
+    // Calculate real stats from the courses data
+    const totalCoursesCount = totalCourses || courses.length;
+    
+    // Calculate total sections and videos from all courses
+    const totalSections = courses.reduce((sum, course) => sum + (course.sections?.length || 0), 0);
+    const totalVideos = courses.reduce((sum, course) => {
+      return sum + (course.sections?.reduce((sectionSum, section) => 
+        sectionSum + (section.subtopics?.length || 0), 0) || 0);
+    }, 0);
+    
+    // Calculate featured courses (courses with content)
+    const featuredCourses = courses.filter(course => 
+      course.sections && course.sections.length > 0
+    ).length;
+    
+    return {
+      totalCourses: totalCoursesCount,
+      totalStudents: 0, // Will be updated when API provides this data
+      avgRating: 0, // Will be updated when API provides this data
+      featuredCourses,
+      totalSections,
+      totalVideos
+    };
+  };
 
-    return { totalCourses, totalStudents, avgRating, featuredCourses }
-  }
-
-  const stats = getStats()
+  const stats = getStats();
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <LoadingSpinner size="lg" />
       </div>
-    )
+    );
   }
 
   return (
@@ -151,7 +207,8 @@ export default function CoursesPage() {
               Explore Courses
             </h1>
             <p className="text-lg text-gray-600 mb-8">
-              Discover AI-powered courses designed to accelerate your learning journey
+              Discover AI-powered courses designed to accelerate your learning
+              journey
             </p>
           </motion.div>
 
@@ -170,7 +227,9 @@ export default function CoursesPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Total Courses</p>
-                    <p className="text-lg font-semibold">{stats.totalCourses}</p>
+                    <p className="text-lg font-semibold">
+                      {stats.totalCourses}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -180,11 +239,13 @@ export default function CoursesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-success-100 rounded-full flex items-center justify-center">
-                    <Users className="w-5 h-5 text-success-600" />
+                    <BookOpen className="w-5 h-5 text-success-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Students</p>
-                    <p className="text-lg font-semibold">{stats.totalStudents}</p>
+                    <p className="text-sm text-gray-600">Total Sections</p>
+                    <p className="text-lg font-semibold">
+                      {stats.totalSections}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -194,11 +255,13 @@ export default function CoursesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-warning-100 rounded-full flex items-center justify-center">
-                    <Star className="w-5 h-5 text-warning-600" />
+                    <Play className="w-5 h-5 text-warning-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Avg Rating</p>
-                    <p className="text-lg font-semibold">{stats.avgRating.toFixed(1)}</p>
+                    <p className="text-sm text-gray-600">Total Videos</p>
+                    <p className="text-lg font-semibold">
+                      {stats.totalVideos}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -212,7 +275,9 @@ export default function CoursesPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Featured</p>
-                    <p className="text-lg font-semibold">{stats.featuredCourses}</p>
+                    <p className="text-lg font-semibold">
+                      {stats.featuredCourses || 'N/A'}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -237,16 +302,13 @@ export default function CoursesPage() {
                     <input
                       type="text"
                       placeholder="Search courses..."
-                      value={filters.search || ''}
-                      onChange={(e) => handleFiltersChange({ ...filters, search: e.target.value })}
+                      value={filters.search || ""}
+                      onChange={(e) => handleSearch(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
+
+                  <Button variant="outline" className="flex items-center gap-2">
                     <Filter className="w-4 h-4" />
                     Filters
                   </Button>
@@ -257,21 +319,21 @@ export default function CoursesPage() {
                   {/* View Mode Toggle */}
                   <div className="flex items-center bg-gray-100 rounded-lg p-1">
                     <button
-                      onClick={() => setViewMode('grid')}
+                      onClick={() => setViewMode("grid")}
                       className={`p-2 rounded-md transition-colors ${
-                        viewMode === 'grid' 
-                          ? 'bg-white text-primary-600 shadow-sm' 
-                          : 'text-gray-600 hover:text-gray-900'
+                        viewMode === "grid"
+                          ? "bg-white text-primary-600 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
                       }`}
                     >
                       <Grid className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => setViewMode('list')}
+                      onClick={() => setViewMode("list")}
                       className={`p-2 rounded-md transition-colors ${
-                        viewMode === 'list' 
-                          ? 'bg-white text-primary-600 shadow-sm' 
-                          : 'text-gray-600 hover:text-gray-900'
+                        viewMode === "list"
+                          ? "bg-white text-primary-600 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
                       }`}
                     >
                       <List className="w-4 h-4" />
@@ -303,13 +365,69 @@ export default function CoursesPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
         >
-          <CourseGrid 
+          <CourseGrid
             courses={filteredCourses}
             filters={filters}
             onFiltersChange={handleFiltersChange}
             loading={loading}
           />
         </motion.div>
+
+        {/* Pagination */}
+        {!loading && filteredCourses.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+            className="mt-8 flex justify-center"
+          >
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-3 py-2"
+              >
+                Previous
+              </Button>
+
+              <div className="flex items-center space-x-1">
+                {Array.from(
+                  {
+                    length: Math.min(
+                      5,
+                      Math.ceil(totalCourses / (filters.limit || 20))
+                    ),
+                  },
+                  (_, i) => {
+                    const page = i + 1;
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "primary" : "outline"}
+                        onClick={() => handlePageChange(page)}
+                        className="px-3 py-2 min-w-[40px]"
+                      >
+                        {page}
+                      </Button>
+                    );
+                  }
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={
+                  currentPage >= Math.ceil(totalCourses / (filters.limit || 20))
+                }
+                className="px-3 py-2"
+              >
+                Next
+              </Button>
+            </div>
+          </motion.div>
+        )}
 
         {/* No Results */}
         {!loading && filteredCourses.length === 0 && (
@@ -324,15 +442,20 @@ export default function CoursesPage() {
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="w-8 h-8 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No courses found</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  No courses found
+                </h3>
                 <p className="text-gray-600 mb-4">
-                  Try adjusting your search terms or filters to find what you&apos;re looking for.
+                  Try adjusting your search terms or filters to find what
+                  you&apos;re looking for.
                 </p>
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => {
-                    setFilters({})
-                    setSortBy('newest')
+                    const clearedFilters = { page: 1, limit: 20 };
+                    setFilters(clearedFilters);
+                    setSortBy("newest");
+                    fetchCourses(clearedFilters);
                   }}
                 >
                   Clear all filters
@@ -343,5 +466,5 @@ export default function CoursesPage() {
         )}
       </main>
     </div>
-  )
+  );
 }

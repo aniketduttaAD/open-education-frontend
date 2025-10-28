@@ -3,137 +3,137 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-
-
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { ProgressBar } from '@/components/ui/ProgressBar'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { usePayment } from '@/lib/payments'
-import { formatPrice } from '@/lib/utils'
-import { CourseEnrollment, CourseWithTutor } from '@/lib/types'
-import { 
-  Star, 
-  Users, 
-  Clock, 
-  BookOpen, 
-  Play, 
-  CheckCircle, 
-  Award,
+import { QuizPreview } from '@/components/course/QuizPreview'
+import { FlashcardPreview } from '@/components/course/FlashcardPreview'
+import { VideoAccordion } from '@/components/course/VideoAccordion'
+import { coursesApi, Course } from '@/lib/api/courses'
+import { useUserStore } from '@/store/userStore'
+import {
+  Star,
+  BookOpen,
+  Play,
   ArrowRight,
-  Calendar,
   User as UserIcon,
   Target,
-  Zap
+  Zap,
+  IndianRupee,
+  Edit,
+  Trash2
 } from 'lucide-react'
 
 export default function CourseDetailPage() {
   const params = useParams()
   const router = useRouter()
   const courseId = params.id as string
+  const { user } = useUserStore()
   
-  const [course, setCourse] = useState<CourseWithTutor | null>(null)
-  const [enrollment, setEnrollment] = useState<CourseEnrollment | null>(null)
+  const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
-  const [enrolling, setEnrolling] = useState(false)
-  const [user, setUser] = useState<{
-    id: string;
-    email: string;
-    role: 'student' | 'tutor' | 'admin';
-    onboarding_completed: boolean;
-    role_selected_at: string | null;
-    created_at: string;
-    updated_at: string;
-  } | null>(null)
-  
-  const { processPayment } = usePayment()
+  const [error, setError] = useState<string | null>(null)
 
   const fetchCourseData = useCallback(async () => {
+    if (!courseId) return;
+    
     try {
-      setCourse(null)
-      setEnrollment(null)
-    } catch (error) {
-      console.error('Error fetching course data:', error)
+      setLoading(true);
+      setError(null);
+      const courseData = await coursesApi.getCourse(courseId);
+      
+      // Transform the API response to match our Course interface
+      const transformedCourse: Course = {
+        ...courseData,
+        price: courseData.price_inr || 0,
+        tutor_id: courseData.tutor?.id || courseData.tutor_user_id || '',
+        avg_rating: null,
+        total_enrollments: 0,
+        estimated_duration: null,
+        is_featured: false,
+        status: 'published',
+        total_ratings: 0,
+        completion_rate: null,
+        total_revisions_requested: 0,
+        max_revisions_allowed: 0,
+        thumbnail_url: null,
+        published_at: courseData.created_at,
+        description: courseData.description || 'No description available',
+        summary: {
+          totalSections: courseData.sections?.length || 0,
+          totalSubtopics: courseData.sections?.reduce((sum, section) => sum + (section.subtopics?.length || 0), 0) || 0,
+          totalVideos: courseData.sections?.reduce((sum, section) => sum + (section.subtopics?.length || 0), 0) || 0,
+          totalQuizzes: courseData.sections?.reduce((sum, section) => sum + (section.quizzes?.length || 0), 0) || 0,
+          totalFlashcards: courseData.sections?.reduce((sum, section) => sum + (section.flashcards?.length || 0), 0) || 0
+        }
+      };
+      
+      setCourse(transformedCourse);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch course data');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, [courseId])
 
   useEffect(() => {
-    checkUser()
-  }, [])
+    fetchCourseData()
+  }, [fetchCourseData])
 
   useEffect(() => {
-    if (user && courseId) {
-      fetchCourseData()
-    }
-  }, [user, courseId, fetchCourseData])
+    document.title = course ? `${course.title} - OpenEducation` : "Course - OpenEducation";
+  }, [course])
 
-  const checkUser = async () => {
-    setUser(null)
+  const handleEditCourse = () => {
+    router.push(`/tutor/courses/${courseId}/edit`)
   }
 
-
-
-  const handleEnroll = async () => {
-    if (!user) {
-      router.push('/auth/callback')
+  const handleDeleteCourse = async () => {
+    if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
       return
     }
 
-    if (!course) return
-
-    setEnrolling(true)
     try {
-      await processPayment()
-      
-      // Refresh enrollment data
-      await fetchCourseData()
-      
-      // Show success message
-      alert('Successfully enrolled in the course!')
-    } catch (error) {
-      console.error('Enrollment error:', error)
-      alert('Failed to enroll. Please try again.')
-    } finally {
-      setEnrolling(false)
+      await coursesApi.deleteCourse(courseId)
+      router.push('/tutor/courses')
+    } catch (err) {
+      alert('Failed to delete course: ' + (err instanceof Error ? err.message : 'Unknown error'))
     }
-  }
-
-  const formatDuration = (minutes: number | null) => {
-    if (!minutes) return 'N/A'
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    if (hours > 0) {
-      return `${hours}h ${mins > 0 ? `${mins}m` : ''}`
-    }
-    return `${mins}m`
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="lg" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-neutral-600">Loading course...</p>
+        </div>
       </div>
     )
   }
 
-  if (!course) {
+  if (error || !course) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Course not found</h1>
-          <p className="text-gray-600 mb-4">The course you&apos;re looking for doesn&apos;t exist.</p>
+          <div className="text-4xl mb-4">❌</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Course Not Found</h1>
+          <p className="text-gray-600 mb-6">{error || 'The course you are looking for does not exist.'}</p>
           <Button onClick={() => router.push('/courses')}>
-            Browse Courses
+            Browse All Courses
           </Button>
         </div>
       </div>
     )
   }
 
-  const isEnrolled = !!enrollment
-  const canEnroll = course.status === 'published' && !isEnrolled
+  const isOwner = user?.id === course.tutor_user_id
+  const isTutor = user?.user_type === 'tutor' && course?.tutor_id === user?.id
+  const isStudent = user?.user_type === 'student'
+  const totalSections = course.sections?.length || 0
+  const totalVideos = course.sections?.reduce((sum, section) => sum + (section.subtopics?.length || 0), 0) || 0
+  const totalQuizzes = course.sections?.reduce((sum, section) => sum + (section.quizzes?.length || 0), 0) || 0
+  const totalFlashcards = course.sections?.reduce((sum, section) => sum + (section.flashcards?.length || 0), 0) || 0
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -150,11 +150,28 @@ export default function CourseDetailPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-6 left-6 text-white">
                   <h1 className="text-3xl font-bold mb-2">{course.title}</h1>
-                  <p className="text-lg opacity-90 max-w-2xl">{course.description}</p>
+                  <p className="text-lg opacity-90 max-w-2xl">{course.description || 'No description available'}</p>
                 </div>
-                {course.is_featured && (
-                  <div className="absolute top-6 right-6 bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    Featured Course
+                {isOwner && (
+                  <div className="absolute top-6 right-6 flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleEditCourse}
+                      className="bg-white/90 hover:bg-white"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleDeleteCourse}
+                      className="bg-red-500/90 hover:bg-red-600 text-white border-red-500"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
                   </div>
                 )}
               </div>
@@ -167,234 +184,312 @@ export default function CourseDetailPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Course Stats */}
             <Card>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CardHeader>
+                <h2 className="text-xl font-semibold">Course Overview</h2>
+              </CardHeader>
+              <CardContent>
+                <div className={`grid gap-4 ${isStudent ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
                   <div className="text-center">
-                    <div className="flex items-center justify-center w-12 h-12 bg-primary-100 rounded-full mx-auto mb-2">
-                      <Star className="w-6 h-6 text-primary-600" />
-                    </div>
-                    <p className="text-sm text-gray-600">Rating</p>
-                    <p className="text-lg font-semibold">{course.avg_rating?.toFixed(1) || '4.5'}</p>
+                    <div className="text-2xl font-bold text-primary-600">{totalSections}</div>
+                    <div className="text-sm text-neutral-600">Sections</div>
                   </div>
                   <div className="text-center">
-                    <div className="flex items-center justify-center w-12 h-12 bg-success-100 rounded-full mx-auto mb-2">
-                      <Users className="w-6 h-6 text-success-600" />
-                    </div>
-                    <p className="text-sm text-gray-600">Students</p>
-                    <p className="text-lg font-semibold">{course.total_enrollments || 0}</p>
+                    <div className="text-2xl font-bold text-green-600">{totalVideos}</div>
+                    <div className="text-sm text-neutral-600">Video Lessons</div>
                   </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center w-12 h-12 bg-secondary-100 rounded-full mx-auto mb-2">
-                      <Clock className="w-6 h-6 text-secondary-600" />
-                    </div>
-                    <p className="text-sm text-gray-600">Duration</p>
-                    <p className="text-lg font-semibold">{formatDuration(course.estimated_duration)}</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center w-12 h-12 bg-warning-100 rounded-full mx-auto mb-2">
-                      <BookOpen className="w-6 h-6 text-warning-600" />
-                    </div>
-                    <p className="text-sm text-gray-600">Completion</p>
-                    <p className="text-lg font-semibold">{course.completion_rate || 0}%</p>
-                  </div>
+                  {!isStudent && (
+                    <>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{totalQuizzes}</div>
+                        <div className="text-sm text-neutral-600">Quizzes</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">{totalFlashcards}</div>
+                        <div className="text-sm text-neutral-600">Flashcards</div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Course Features */}
-            <Card>
-              <CardHeader>
-                <h2 className="text-xl font-semibold">What you&apos;ll learn</h2>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="w-5 h-5 text-success-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">AI-powered personalized learning experience</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="w-5 h-5 text-success-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">Interactive quizzes and assessments</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="w-5 h-5 text-success-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">24/7 AI learning assistant</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="w-5 h-5 text-success-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">Certificate upon completion</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="w-5 h-5 text-success-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">Progress tracking and analytics</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="w-5 h-5 text-success-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">Lifetime access to course content</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Course Content */}
+            {course.sections && course.sections.length > 0 ? (
+              <div className="space-y-6">
+                {/* Video Lessons Accordion */}
+                <Card>
+                  <CardHeader>
+                    <h2 className="text-xl font-semibold flex items-center">
+                      <Play className="w-5 h-5 mr-2" />
+                      Video Lessons ({totalVideos})
+                    </h2>
+                    <p className="text-gray-600">Click on any section to expand and view video lessons</p>
+                  </CardHeader>
+                  <CardContent>
+                    <VideoAccordion sections={course.sections as any} />
+                  </CardContent>
+                </Card>
 
-            {/* Course Requirements */}
-            <Card>
-              <CardHeader>
-                <h2 className="text-xl font-semibold">Requirements</h2>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  <li className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0" />
-                    <span className="text-gray-700">Basic computer skills and internet access</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0" />
-                    <span className="text-gray-700">No prior experience required - suitable for beginners</span>
-                  </li>
-                  <li className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0" />
-                    <span className="text-gray-700">Dedication to learn and practice regularly</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
+                {/* Quizzes Section - Only show for tutors */}
+                {!isStudent && course.sections.some(section => section.quizzes && section.quizzes.length > 0) && (
+                  <Card>
+                    <CardHeader>
+                      <h2 className="text-xl font-semibold flex items-center">
+                        <Target className="w-5 h-5 mr-2" />
+                        Quizzes ({totalQuizzes})
+                      </h2>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {course.sections.map((section) => (
+                        section.quizzes && section.quizzes.length > 0 && (
+                          <div key={section.id}>
+                            <h3 className="font-medium mb-3 text-gray-800">
+                              {section.title} Quizzes
+                            </h3>
+                            <div className="space-y-3">
+                              {section.quizzes.map((quiz) => (
+                                <QuizPreview key={quiz.id} quiz={quiz as any} />
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
 
-            {/* Course Description */}
-            <Card>
-              <CardHeader>
-                <h2 className="text-xl font-semibold">Course Description</h2>
-              </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none">
-                  <p className="text-gray-700 leading-relaxed">
-                    {course.description}
-                  </p>
-                  <p className="text-gray-700 leading-relaxed mt-4">
-                    This comprehensive course is designed to provide you with a solid foundation and practical skills. 
-                    Our AI-powered learning system adapts to your pace and learning style, ensuring you get the most 
-                    out of your educational journey.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                {/* Flashcards Section - Only show for tutors */}
+                {!isStudent && course.sections.some(section => section.flashcards && section.flashcards.length > 0) && (
+                  <Card>
+                    <CardHeader>
+                      <h2 className="text-xl font-semibold flex items-center">
+                        <Zap className="w-5 h-5 mr-2" />
+                        Flashcards ({totalFlashcards})
+                      </h2>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {course.sections.map((section) => (
+                        section.flashcards && section.flashcards.length > 0 && (
+                          <div key={section.id}>
+                            <h3 className="font-medium mb-3 text-gray-800">
+                              {section.title} Flashcards
+                            </h3>
+                            <FlashcardPreview flashcards={section.flashcards as any} />
+                          </div>
+                        )
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <BookOpen className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
+                  <p className="text-neutral-600">No course content available yet.</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Enrollment Card */}
-            <Card className="sticky top-8">
-              <CardContent className="p-6">
-                <div className="text-center mb-6">
-                  <div className="text-3xl font-bold text-primary-600 mb-2">
-                    {formatPrice(course.price)}
+            {/* Course Info */}
+            <Card>
+              <CardHeader>
+                <h3 className="text-lg font-semibold">Course Details</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Price</span>
+                  <div className="flex items-center font-semibold">
+                    <IndianRupee className="w-4 h-4 mr-1" />
+                    {course.price_inr ? course.price_inr : 'Free'}
                   </div>
-                  <p className="text-gray-600">One-time payment</p>
                 </div>
-
-                {isEnrolled ? (
-                  <div className="space-y-4">
-                    <div className="bg-success-50 border border-success-200 rounded-lg p-4">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="w-5 h-5 text-success-600" />
-                        <span className="text-success-800 font-medium">You&apos;re enrolled!</span>
-                      </div>
-                    </div>
-                    
-                    {enrollment && (
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm text-gray-600">Progress</p>
-                          <ProgressBar 
-                            progress={enrollment.progress_percentage || 0} 
-                            showLabel={false}
-                            className="mt-1"
-                          />
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          {enrollment.completed_subtopics || 0} of {enrollment.total_subtopics || 0} lessons completed
-                        </p>
-                      </div>
-                    )}
-                    
-                    <Button 
-                      className="w-full" 
-                      onClick={() => router.push(`/courses/${course.id}/learn`)}
-                    >
-                      Continue Learning
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Button 
-                      className="w-full" 
-                      size="lg"
-                      onClick={handleEnroll}
-                      loading={enrolling}
-                      disabled={!canEnroll}
-                    >
-                      {canEnroll ? 'Enroll Now' : 'Coming Soon'}
-                    </Button>
-                    
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">
-                        30-Day Money-Back Guarantee
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center space-x-3">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Lifetime access</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Play className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Video lessons</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Target className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Quizzes & assessments</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Zap className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">AI learning assistant</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Award className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Certificate of completion</span>
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Status</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    course.status === 'published' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {course.status}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Created</span>
+                  <span className="text-sm">
+                    {new Date(course.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Updated</span>
+                  <span className="text-sm">
+                    {new Date(course.updated_at).toLocaleDateString()}
+                  </span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Tutor Info */}
-            {course.tutor_profiles && (
+            {course.tutor && (
               <Card>
                 <CardHeader>
-                  <h3 className="text-lg font-semibold">About the Instructor</h3>
+                  <h3 className="text-lg font-semibold">Instructor</h3>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                      <UserIcon className="w-6 h-6 text-primary-600" />
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      {course.tutor.image ? (
+                        <img 
+                          src={course.tutor.image} 
+                          alt={course.tutor.name}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserIcon className="w-6 h-6 text-primary-600" />
+                      )}
                     </div>
-                    <div>
-                      <p className="font-medium">{course.tutor_profiles.name}</p>
-                      <p className="text-sm text-gray-600">
-                        {course.tutor_profiles.total_students || 0} students enrolled
-                      </p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-lg">{course.tutor.name}</p>
+                        {course.tutor.verification_status === 'verified' && (
+                          <span className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-green-600 text-xs font-bold">✓</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{course.tutor.email}</p>
+                      
+                      {isStudent && course.tutor.bio && (
+                        <p className="text-sm text-gray-700 mb-3">{course.tutor.bio}</p>
+                      )}
+                      
+                      {isStudent && course.tutor.expertise_areas && course.tutor.expertise_areas.length > 0 && (
+                        <div className="mb-2">
+                          <p className="text-xs font-medium text-gray-500 mb-1">Expertise Areas:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {course.tutor.expertise_areas.map((area, index) => (
+                              <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                {area}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {isStudent && course.tutor.teaching_experience && (
+                        <p className="text-xs text-gray-600">
+                          <span className="font-medium">Experience:</span> {course.tutor.teaching_experience}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  {course.tutor_profiles.bio && (
-                    <p className="text-sm text-gray-600">{course.tutor_profiles.bio}</p>
-                  )}
                 </CardContent>
               </Card>
             )}
+
+            {/* Actions */}
+            <Card>
+              <CardContent className="pt-6">
+                {isOwner ? (
+                  // Course Owner Actions
+                  <div className="space-y-3">
+                    <Button 
+                      className="w-full" 
+                      onClick={() => router.push('/tutor/courses')}
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Manage Courses
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => router.push('/tutor/dashboard')}
+                    >
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      Back to Dashboard
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => router.push(`/tutor/courses/${courseId}/edit`)}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Course
+                    </Button>
+                  </div>
+                ) : isTutor ? (
+                  // Other Tutor Actions
+                  <div className="space-y-3">
+                    <Button 
+                      className="w-full" 
+                      onClick={() => router.push('/tutor/courses')}
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      View My Courses
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => router.push('/tutor/dashboard')}
+                    >
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      Back to Dashboard
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => router.push('/courses')}
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Browse All Courses
+                    </Button>
+                  </div>
+                ) : isStudent ? (
+                  // Student Actions
+                  <div className="space-y-3">
+                    <Button className="w-full" size="lg">
+                      <Play className="w-4 h-4 mr-2" />
+                      {course.price_inr ? `Enroll for ₹${course.price_inr}` : 'Enroll for Free'}
+                    </Button>
+                    <Button variant="outline" className="w-full">
+                      <Star className="w-4 h-4 mr-2" />
+                      Add to Wishlist
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => router.push('/courses')}
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Browse More Courses
+                    </Button>
+                  </div>
+                ) : (
+                  // Guest/Not Logged In Actions
+                  <div className="space-y-3">
+                    <Button 
+                      className="w-full" 
+                      size="lg"
+                      onClick={() => router.push('/login')}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Login to Enroll
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => router.push('/courses')}
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Browse All Courses
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

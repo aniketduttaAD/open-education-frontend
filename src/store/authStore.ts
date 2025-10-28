@@ -99,41 +99,9 @@ export const useAuthStore = create<AuthState>()(
           
           set({ loading: false, showLoginModal: false });
 
-          // Handle different user states and redirect immediately
-          if (!user.user_type) {
-            // No user type - redirect to role selection
-            set({ showRoleModal: true });
-            if (typeof window !== 'undefined') {
-              window.location.href = '/auth/callback';
-            }
-            return;
-          }
-
-          // Ensure role modal is closed when role exists
-          set({ showRoleModal: false });
-
-          // Check if onboarding is needed and redirect immediately
-          if (needsStudentOnboarding(user)) {
-            set({ showStudentOnboarding: true });
-            if (typeof window !== 'undefined') {
-              window.location.href = '/student/onboarding';
-            }
-          } else if (needsTutorOnboarding(user)) {
-            set({ showTutorOnboarding: true });
-            if (typeof window !== 'undefined') {
-              window.location.href = '/tutor/onboarding';
-            }
-          } else {
-            // User is fully onboarded, redirect to dashboard
-            if (typeof window !== 'undefined') {
-              if (user.user_type === 'student') {
-                window.location.href = '/student/dashboard';
-              } else if (user.user_type === 'tutor') {
-                window.location.href = '/tutor/dashboard';
-              } else {
-                window.location.href = '/';
-              }
-            }
+          // Single redirect: let OnboardingHandler handle modals and routing
+          if (typeof window !== 'undefined') {
+            window.location.href = '/';
           }
         } catch (error) {
           console.error('Google One Tap login failed:', error);

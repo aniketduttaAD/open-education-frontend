@@ -3,9 +3,11 @@ import {
   GenerateRoadmapDto, 
   EditRoadmapDto, 
   FinalizeRoadmapDto,
+  PublishCourseDto,
   GenerateRoadmapApiResponse,
   EditRoadmapApiResponse,
-  FinalizeRoadmapResponse
+  FinalizeRoadmapResponse,
+  PublishCourseResponse
 } from '@/lib/types/roadmap';
 
 export const roadmapApi = {
@@ -22,5 +24,10 @@ export const roadmapApi = {
   finalize: async (data: FinalizeRoadmapDto): Promise<FinalizeRoadmapResponse> => {
     const response = await api.post('/api/roadmaps/finalize', data);
     return response.data as FinalizeRoadmapResponse;
+  },
+
+  publish: async (roadmapId: string, data: PublishCourseDto): Promise<PublishCourseResponse> => {
+    const response = await api.post(`/api/roadmaps/${roadmapId}/publish`, data);
+    return response.data as PublishCourseResponse;
   }
 };

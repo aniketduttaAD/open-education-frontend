@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -21,6 +23,7 @@ export default function StudentOnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [form, setForm] = useState({
+    dob: '',
     degree: '',
     college_name: '',
     interestsText: '',
@@ -36,6 +39,7 @@ export default function StudentOnboardingPage() {
     if (!sd) return
     setForm(prev => ({
       ...prev,
+      dob: sd.dob || prev.dob,
       degree: sd.degree || prev.degree,
       college_name: sd.college_name || prev.college_name,
       interestsText: Array.isArray(sd.interests) ? sd.interests.join(', ') : prev.interestsText,
@@ -52,6 +56,7 @@ export default function StudentOnboardingPage() {
   }
 
   const derivedInput: StudentOnboardingInput = useMemo(() => ({
+    dob: form.dob,
     degree: form.degree.trim(),
     college_name: form.college_name.trim(),
     interests: form.interestsText.split(',').map(s => s.trim()).filter(Boolean),
@@ -75,6 +80,8 @@ export default function StudentOnboardingPage() {
     }
     setLoading(true)
     await saveStudentDetails({
+      gender: 'male',
+      dob: derivedInput.dob,
       degree: derivedInput.degree,
       college_name: derivedInput.college_name,
       interests: derivedInput.interests,
@@ -103,6 +110,28 @@ export default function StudentOnboardingPage() {
           <CardContent className="space-y-6">
 
             {/* Core fields required by the unified flow */}
+
+            <div>
+              <label className="flex items-center text-sm font-medium text-neutral-700 mb-3">
+                <User className="w-4 h-4 mr-2 text-primary-600" />
+                Date of Birth *
+              </label>
+              <DatePicker
+                selected={form.dob ? new Date(form.dob) : null}
+                onChange={(date) => {
+                  const v = date ? format(date, 'yyyy-MM-dd') : ''
+                  setForm(prev => ({ ...prev, dob: v }))
+                  setErrors(prev => ({ ...prev, dob: undefined }))
+                }}
+                placeholder="Select your date of birth"
+                className={errors.dob ? 'border-red-500' : ''}
+              />
+              {errors.dob && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.dob}
+                </p>
+              )}
+            </div>
 
             <div>
               <label className="flex items-center text-sm font-medium text-neutral-700 mb-3">

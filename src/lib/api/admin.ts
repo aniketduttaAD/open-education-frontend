@@ -2,7 +2,7 @@ import Axios from "axios";
 
 // Create a separate axios instance for admin API calls without automatic token injection
 const adminApiClient = Axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8081",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -220,8 +220,16 @@ export const adminApi = {
     }
     console.log("Verification stats received:", actualData.data);
 
-    // Return the actual data structure from the API
-    return actualData.data as Record<string, unknown>;
+    // Map API response to VerificationStats shape
+    const apiStats = actualData.data;
+    const stats: VerificationStats = {
+      total_pending: apiStats.pending,
+      total_verified: apiStats.verified,
+      total_rejected: apiStats.rejected,
+      pending_this_week: 0,
+      verified_this_week: 0,
+    };
+    return stats;
   },
 
   // Test all endpoints with owner token

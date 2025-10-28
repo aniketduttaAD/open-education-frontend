@@ -1,6 +1,15 @@
 import { z } from "zod";
 
 export const StudentOnboardingSchema = z.object({
+  dob: z
+    .string()
+    .refine((v) => /\d{4}-\d{2}-\d{2}/.test(v), "Valid date is required (YYYY-MM-DD)")
+    .refine((v) => {
+      const today = new Date();
+      const dob = new Date(v);
+      const age = today.getFullYear() - dob.getFullYear() - (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0);
+      return age >= 15;
+    }, "You must be at least 15 years old"),
   degree: z.string().trim().min(1, "Degree is required"),
   college_name: z.string().trim().min(1, "College/University is required"),
   interests: z.array(z.string().trim()).min(1, "Select at least one interest"),

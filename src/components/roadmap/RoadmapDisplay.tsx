@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -16,15 +17,6 @@ import {
   X,
 } from "lucide-react";
 import { useRoadmapStore } from "@/store/roadmapStore";
-import {
-  createWebSocketService,
-  defaultWebSocketConfig,
-} from "@/lib/services/websocket.service";
-import {
-  WebSocketEvent,
-  WebSocketProgressEvent,
-  WebSocketPhaseEvent,
-} from "@/lib/types/courseGeneration";
 import type { FlatRoadmapResponse } from "@/lib/types/roadmap";
 
 interface RoadmapDisplayProps {
@@ -299,6 +291,7 @@ export default function RoadmapDisplay({
   onFinalize,
   showActions = true,
 }: RoadmapDisplayProps) {
+  const router = useRouter();
   const {
     addMainTopic,
     hasChanges,
@@ -306,7 +299,6 @@ export default function RoadmapDisplay({
     saveChangesToBackend,
     resetToOriginal,
     checkForChanges,
-    finalizeRoadmap,
   } = useRoadmapStore();
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
@@ -314,13 +306,6 @@ export default function RoadmapDisplay({
   const [allExpanded, setAllExpanded] = useState(false);
   const [isAddingMainTopic, setIsAddingMainTopic] = useState(false);
   const [newMainTopicValue, setNewMainTopicValue] = useState("");
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  const [wsConnected, setWsConnected] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [currentTask, setCurrentTask] = useState("");
-  const [phase, setPhase] = useState("");
-  const [wsError, setWsError] = useState<string | null>(null);
-  const [events, setEvents] = useState<WebSocketEvent[]>([]);
 
   const roadmapData = roadmap.data;
   
@@ -390,57 +375,15 @@ export default function RoadmapDisplay({
     resetToOriginal();
   };
 
-  const handleWsEvent = useCallback((event: WebSocketEvent) => {
-    setEvents((prev) => [...prev, event]);
-    if (event.type === "content_generation_progress") {
-      const e = event as WebSocketProgressEvent;
-      setProgress(e.progressPercentage);
-      setCurrentTask(e.currentTask);
-      setWsError(null);
-    } else {
-      const e = event as WebSocketPhaseEvent;
-      setPhase(e.type.replace("_done", "").replace("job_", ""));
-      if (e.type === "job_failed") {
-        setWsError(e.error || "Generation failed");
-      }
-    }
-  }, []);
-
   // Check if there are changes
   const hasUnsavedChanges = hasChanges || checkForChanges();
 
   const handleFinalize = useCallback(async () => {
     if (hasUnsavedChanges) return;
-    setIsFinalizing(true);
-    setEvents([]);
-    setProgress(0);
-    setCurrentTask("Starting...");
-    setPhase("starting");
-    setWsError(null);
-    try {
-      console.log("[Roadmap] Finalize clicked. Calling API with roadmap id:", roadmap.id);
-      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") || "" : "";
-      const resp = await finalizeRoadmap({ id: roadmap.id });
-      console.log("[Roadmap] Finalize API response:", resp);
-      if (!resp.success) {
-        setWsError("Failed to finalize roadmap");
-        setIsFinalizing(false);
-        return;
-      }
-      console.log("[Roadmap] Connecting WebSocket for course:", resp.courseId);
-      const ws = createWebSocketService({ ...defaultWebSocketConfig, token });
-      await ws.connect();
-      setWsConnected(true);
-      ws.onCourseProgress(resp.courseId, handleWsEvent);
-      ws.onEvent("content_generation_progress", (d) => handleWsEvent(d as unknown as WebSocketEvent));
-      ws.onEvent("job_started", (d) => handleWsEvent(d as unknown as WebSocketEvent));
-      ws.onEvent("job_completed", (d) => handleWsEvent(d as unknown as WebSocketEvent));
-      ws.onEvent("job_failed", (d) => handleWsEvent(d as unknown as WebSocketEvent));
-    } catch (e) {
-      setWsError((e as { message?: string })?.message || "Failed to start real-time updates");
-      setIsFinalizing(false);
-    }
-  }, [finalizeRoadmap, roadmap.id, hasUnsavedChanges, handleWsEvent]);
+    
+    // Navigate to course generation page
+    router.push(`/courses/generate/${roadmap.id}`);
+  }, [hasUnsavedChanges, router, roadmap.id]);
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -606,38 +549,13 @@ export default function RoadmapDisplay({
 
                 <Button
                   onClick={handleFinalize}
-                  disabled={hasUnsavedChanges || isFinalizing}
+                  disabled={hasUnsavedChanges}
                   className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isFinalizing ? "Finalizing..." : "Finalize Roadmap"}
+                  Finalize Roadmap
                 </Button>
               </div>
             </div>
-            {isFinalizing && (
-              <div className="mt-6 p-4 rounded-lg border border-gray-200 bg-gray-50">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm text-gray-700">
-                    {wsConnected ? "Connected to real-time updates" : "Connecting to real-time updates..."}
-                  </div>
-                  <div className="w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
-                  </div>
-                </div>
-                <div className="text-sm text-gray-800 mb-2">Current task: {currentTask || phase || "Starting..."}</div>
-                {wsError && <div className="text-sm text-red-600 mb-2">{wsError}</div>}
-                <div className="max-h-48 overflow-auto bg-white border border-gray-200 rounded p-2 text-xs text-gray-700">
-                  {events.length === 0 ? (
-                    <div className="text-gray-400">Waiting for events...</div>
-                  ) : (
-                    events.map((e, idx) => (
-                      <div key={idx} className="py-0.5">
-                        <span className="font-medium">{e.type}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         )}
 

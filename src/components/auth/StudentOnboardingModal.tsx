@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { User, GraduationCap, MapPin, Calendar } from 'lucide-react'
 import { z } from 'zod'
 import { useAuthStore } from '@/store/authStore'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
+import { DatePicker } from '../ui/DatePicker'
 
 interface StudentOnboardingModalProps {
   isOpen: boolean
@@ -31,9 +30,9 @@ const StudentOnboardingSchema = z.object({
         actualAge = age - 1
       }
       
-      return actualAge >= 13 && actualAge <= 100
+      return actualAge >= 15 && actualAge <= 100
     },
-    'You must be between 13 and 100 years old'
+    'You must be at least 15 years old'
   ),
   latestDegree: z.string().min(1, 'Latest degree is required'),
   collegeUniversity: z.string().min(1, 'College/University name is required')
@@ -182,15 +181,8 @@ export function StudentOnboardingModal({ isOpen, onComplete, loading = false }: 
                       <DatePicker
                         selected={formData.dob}
                         onChange={handleDateChange}
-                        dateFormat="dd/MM/yyyy"
-                        showYearDropdown
-                        showMonthDropdown
-                        dropdownMode="select"
-                        maxDate={new Date()}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                          errors.dob ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholderText="Select your date of birth"
+                        placeholder="Select your date of birth"
+                        className={errors.dob ? 'border-red-500' : ''}
                       />
                       {errors.dob && (
                         <p className="mt-1 text-sm text-red-600">{errors.dob}</p>

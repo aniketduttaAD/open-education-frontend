@@ -9,6 +9,7 @@ const PUBLIC_PATHS = new Set<string>([
   "/login",
   "/auth/callback",
   "/courses",
+  "/student", // allow student landing to be accessed without auth
 ]);
 
 export function RouteGuard() {

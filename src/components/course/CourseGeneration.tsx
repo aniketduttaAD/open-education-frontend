@@ -139,46 +139,15 @@ export const CourseGeneration: React.FC<CourseGenerationComponentProps> = ({
             </div>
           </div>
 
-          <div className="flex justify-center mb-6">
-            <div
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-lg ${
-                isConnected
-                  ? "bg-green-500/20 text-green-100"
-                  : "bg-red-500/20 text-red-100"
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isConnected ? "bg-green-400 animate-pulse" : "bg-red-400"
-                }`}
-              ></span>
-              <span className="text-sm font-medium">
-                {isConnected
-                  ? "Connected to real-time updates"
-                  : "Connecting..."}
-              </span>
-            </div>
-          </div>
+          {/* removed real-time connection status */}
 
           <div className="text-center">
             <button
               onClick={handleStartGeneration}
-              disabled={!isConnected}
-              className={`px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 ${
-                isConnected
-                  ? "bg-green-500 hover:bg-green-600 hover:scale-105 hover:shadow-lg hover:shadow-green-500/30 text-white"
-                  : "bg-gray-500 cursor-not-allowed text-white"
-              }`}
+              className="px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 bg-green-500 hover:bg-green-600 hover:scale-105 hover:shadow-lg hover:shadow-green-500/30 text-white"
             >
-              {!isConnected ? "Connecting..." : "Start Course Generation"}
+              Start Course Generation
             </button>
-
-            {!isConnected && (
-              <p className="mt-4 text-sm opacity-80">
-                Please wait for connection to real-time updates before starting
-                generation.
-              </p>
-            )}
           </div>
         </div>
       </div>

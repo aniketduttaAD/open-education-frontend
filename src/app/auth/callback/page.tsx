@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { auth } from '@/lib/auth'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { RoleSelectionModal } from '@/components/auth/RoleSelectionModal'
-import { StudentOnboardingModal } from '@/components/auth/StudentOnboardingModal'
+import { usersApi } from '@/lib/api/users'
 import { useToast } from '@/components/ui/ToastProvider'
 
 export default function AuthCallbackPage() {
@@ -14,97 +13,40 @@ export default function AuthCallbackPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showRoleSelection, setShowRoleSelection] = useState(false)
-  const [showStudentOnboarding, setShowStudentOnboarding] = useState(false)
-
-  const handleAuthCallback = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Get URL parameters from OAuth callback
-      const urlParams = new URLSearchParams(window.location.search)
-      const code = urlParams.get('code')
-      const error = urlParams.get('error')
-      
-      if (error) {
-        throw new Error(`OAuth error: ${error}`)
-      }
-      
-      if (!code) {
-        throw new Error('No authorization code received')
-      }
-
-      // Exchange code for tokens (this would be handled by your backend)
-      // For now, just redirect to home since authentication is handled by backend
-      showToast('Authentication successful!', 'success')
-      router.push('/')
-
-    } catch (err: unknown) {
-      console.error('Auth callback error:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Authentication failed'
-      setError(errorMessage)
-      showToast(errorMessage, 'error')
-      setLoading(false)
-    }
-  }, [showToast, router])
 
   useEffect(() => {
-    handleAuthCallback()
-  }, [handleAuthCallback])
+    const run = async () => {
+      try {
+        setLoading(true)
+        setError(null)
 
-  const handleRoleSelect = async (role: 'student' | 'tutor') => {
-    try {
-      setLoading(true)
-      
-      const { error } = await auth.updateUserRole()
-      
-      if (error) {
-        throw new Error(error)
-      }
+        const accessToken = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+        if (!accessToken) {
+          throw new Error('No active session. Please sign in again.')
+        }
 
-      setShowRoleSelection(false)
-      
-      // If student, show onboarding
-      if (role === 'student') {
-        setShowStudentOnboarding(true)
-      } else {
-        // For tutors, redirect to tutor onboarding
-        router.push('/tutor/onboarding')
+        const user = await usersApi.getProfile()
+
+        // If role not selected yet, open role selection
+        if (!user.user_type) {
+          setShowRoleSelection(true)
+          setLoading(false)
+          return
+        }
+
+        // Role already selected -> send user to home (header will route appropriately)
+        showToast('You are signed in', 'success')
+        router.push('/')
+      } catch (err: unknown) {
+        console.error('Auth callback error:', err)
+        const errorMessage = err instanceof Error ? err.message : 'Authentication failed'
+        setError(errorMessage)
+        showToast(errorMessage, 'error')
+        setLoading(false)
       }
-      
-      setLoading(false)
-    } catch (err: unknown) {
-      console.error('Role selection error:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update role'
-      setError(errorMessage)
-      showToast(errorMessage, 'error')
-      setLoading(false)
     }
-  }
-
-  const handleStudentOnboardingComplete = async () => {
-    try {
-      setLoading(true)
-      
-      const { error } = await auth.completeOnboarding()
-      
-      if (error) {
-        throw new Error(error)
-      }
-
-      setShowStudentOnboarding(false)
-      
-      // Redirect to student dashboard
-      router.push('/student/dashboard')
-      
-    } catch (err: unknown) {
-      console.error('Onboarding error:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to complete onboarding'
-      setError(errorMessage)
-      showToast(errorMessage, 'error')
-      setLoading(false)
-    }
-  }
+    run()
+  }, [router, showToast])
 
   if (loading) {
     return (
@@ -114,7 +56,7 @@ export default function AuthCallbackPage() {
             <LoadingSpinner size="xl" />
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Setting up your account</h2>
-          <p className="text-gray-600">Please wait while we configure your profile...</p>
+          <p className="text-gray-600">Redirecting to the homepage...</p>
         </div>
       </div>
     )
@@ -138,19 +80,10 @@ export default function AuthCallbackPage() {
     )
   }
 
-  return (
-    <>
-      <RoleSelectionModal
-        isOpen={showRoleSelection}
-        onRoleSelect={handleRoleSelect}
-        loading={loading}
-      />
-      
-      <StudentOnboardingModal
-        isOpen={showStudentOnboarding}
-        onComplete={handleStudentOnboardingComplete}
-        loading={loading}
-      />
-    </>
-  )
+  // If we're not loading or in error, ensure we are on home where global handler will show modals
+  if (typeof window !== 'undefined') {
+    window.location.href = '/'
+    return null
+  }
+  return null
 }

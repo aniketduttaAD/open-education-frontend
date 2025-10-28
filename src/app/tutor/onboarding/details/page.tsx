@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DatePicker } from '@/components/ui/DatePicker'
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -43,6 +45,7 @@ export default function TutorDetailsPage() {
 
   // Local form state with text inputs converted to arrays on submit
   const [form, setForm] = useState({
+    dob: "",
     bio: "",
     qualificationsText: "",
     qualificationsObj: { education: "", certificationsText: "", experience_years: 0 },
@@ -70,6 +73,7 @@ export default function TutorDetailsPage() {
     if (!td) return;
     setForm(prev => ({
       ...prev,
+      dob: user?.dob || prev.dob,
       bio: td.bio || prev.bio,
       qualificationsText: typeof td.qualifications === 'string' ? td.qualifications : prev.qualificationsText,
       useStructuredQualifications: typeof td.qualifications === 'object',
@@ -118,7 +122,14 @@ export default function TutorDetailsPage() {
 
   const validation = useMemo(() => TutorDetailsFormSchema.safeParse(derivedInput), [derivedInput]);
   const bankValidation = useMemo(() => TutorBankSchema.safeParse(form.bank), [form.bank]);
-  const isValid = validation.success && bankValidation.success;
+  const isDobValid = useMemo(() => {
+    if (!form.dob) return false;
+    const today = new Date();
+    const dob = new Date(form.dob);
+    const age = today.getFullYear() - dob.getFullYear() - (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0);
+    return age >= 18;
+  }, [form.dob]);
+  const isValid = validation.success && bankValidation.success && isDobValid;
 
   const onBankChange = (k: keyof typeof form.bank, v: string) => {
     let next = v;
@@ -140,13 +151,14 @@ export default function TutorDetailsPage() {
       if (!validation.success) {
         validation.error.issues.forEach(i => { e[String(i.path.join('.'))] = i.message });
       }
+      if (!isDobValid) e['dob'] = 'You must be at least 18 years old';
       setErrors(e);
       return;
     }
     setLoading(true);
     await saveTutorDetails({
       gender: user?.gender || 'other',
-      dob: user?.dob || '1990-01-01',
+      dob: form.dob,
       bio: derivedInput.bio,
       qualifications: typeof derivedInput.qualifications === 'string'
         ? { degree: derivedInput.qualifications, institution: '', year: '', additional: '' }
@@ -177,6 +189,23 @@ export default function TutorDetailsPage() {
             {user?.name && <p className="text-neutral-600">Welcome, {user.name}! Complete your profile.</p>}
           </CardHeader>
           <CardContent className="space-y-6">
+            <div>
+              <label className="flex items-center text-sm font-medium text-neutral-700 mb-3">
+                <User className="w-4 h-4 mr-2 text-primary-600" />
+                Date of Birth *
+              </label>
+              <DatePicker
+                selected={form.dob ? new Date(form.dob) : null}
+                onChange={(date) => {
+                  const v = date ? format(date, 'yyyy-MM-dd') : '';
+                  setForm(prev => ({ ...prev, dob: v }));
+                  setErrors(prev => ({ ...prev, dob: undefined }));
+                }}
+                placeholder="Select your date of birth"
+                className={errors['dob'] ? 'border-red-500' : ''}
+              />
+              {errors['dob'] && <p className="mt-1 text-sm text-red-600">{errors['dob']}</p>}
+            </div>
             <div>
               <label className="flex items-center text-sm font-medium text-neutral-700 mb-3">
                 <User className="w-4 h-4 mr-2 text-primary-600" />

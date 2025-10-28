@@ -77,10 +77,157 @@ export interface EditRoadmapApiResponse extends ApiSuccessBase {
 
 export interface FinalizeRoadmapResponse {
   success: boolean;
-  roadmapId: string;
-  courseId: string;
-  totalSections: number;
-  totalSubtopics: number;
+  data: {
+    id: string;
+    roadmapId: string | null;
+    progressId: string | null;
+    sessionId: string;
+    totalSections: number;
+    totalSubtopics: number;
+    status: 'completed';
+    result: {
+      success: boolean;
+      courseId: string;
+      totalSections: number;
+      finalPayload: {
+        roadmap: Record<string, string[]>;
+        sections: Array<{
+          id: string;
+          title: string;
+          index: number;
+          subtopics: Array<{
+            id: string;
+            title: string;
+            index: number;
+            markdown_path: string | null;
+            transcript_path: string | null;
+            audio_path: string | null;
+            video_url: string | null;
+            status: string;
+          }>;
+        }>;
+        quizzes: Array<{
+          id: string;
+          title: string;
+          course_id: string;
+          section_id: string;
+          questions: Array<{
+            id: string;
+            question: string;
+            options: string[];
+            correct_index: number;
+            index: number;
+          }>;
+        }>;
+        flashcards: Array<{
+          id: string;
+          front: string;
+          back: string;
+          course_id: string;
+          section_id: string;
+          index: number;
+        }>;
+        videos: Array<{
+          id: string;
+          title: string;
+          url: string;
+          section: string;
+          sectionIndex: number;
+          subtopicIndex: number;
+        }>;
+        courseDetails: {
+          id: string;
+          title: string;
+          tutor_user_id: string;
+          price_inr: number | null;
+          created_at: string;
+        };
+        generationSummary: {
+          totalSections: number;
+          totalSubtopics: number;
+          totalVideos: number;
+          totalQuizzes: number;
+          totalFlashcards: number;
+          sessionId: string;
+          generatedAt: string;
+        };
+      };
+    };
+  };
+  message: string;
+  timestamp: string;
+}
+
+export interface PublishCourseDto {
+  title: string;
+  price_inr: number;
+  description: string;
+}
+
+export interface PublishCourseResponse {
+  success: boolean;
+  data: {
+    course: {
+      id: string;
+      title: string;
+      tutor_user_id: string;
+      price_inr: number | null;
+      created_at: string;
+      updated_at: string;
+    };
+    sections: Array<{
+      id: string;
+      course_id: string;
+      index: number;
+      title: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    subtopics: Array<{
+      id: string;
+      section_id: string;
+      index: number;
+      title: string;
+      markdown_path: string | null;
+      transcript_path: string | null;
+      audio_path: string | null;
+      video_url: string | null;
+      status: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    videos: Array<{
+      id: string;
+      title: string;
+      url: string;
+      section: string;
+      sectionIndex: number;
+      subtopicIndex: number;
+    }>;
+    quizzes: Array<{
+      id: string;
+      title: string;
+      course_id: string;
+      section_id: string;
+      questions: Array<{
+        id: string;
+        question: string;
+        options: string[];
+        correct_index: number;
+        index: number;
+      }>;
+    }>;
+    flashcards: Array<{
+      id: string;
+      front: string;
+      back: string;
+      course_id: string;
+      section_id: string;
+      index: number;
+    }>;
+  };
+  message: string;
+  timestamp: string;
 }
 
 export interface FlatRoadmapResponse {

@@ -40,6 +40,10 @@ export default function TutorDashboard() {
     router.push('/tutor/courses/create')
   }
 
+  const handleManageCourses = () => {
+    router.push('/tutor/courses')
+  }
+
   useEffect(() => {
     if (!user && !userLoading) {
       fetchUser()
@@ -155,7 +159,7 @@ export default function TutorDashboard() {
                 <Plus className="w-5 h-5 mr-2" />
                 Create New Course
               </Button>
-              <Button className="w-full justify-start" variant="outline" size="lg">
+              <Button className="w-full justify-start" variant="outline" size="lg" onClick={handleManageCourses}>
                 <BookOpen className="w-5 h-5 mr-2" />
                 Manage Courses
               </Button>
